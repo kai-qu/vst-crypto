@@ -1,0 +1,293 @@
+K 25
+svn:wc:ra_dav:version-url
+V 28
+/appel/!svn/ver/6815/vst/sha
+END
+verif_sha_bdo2.v
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/appel/!svn/ver/6771/vst/sha/verif_sha_bdo2.v
+END
+verif_hmac_simple.v
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/appel/!svn/ver/6812/vst/sha/verif_hmac_simple.v
+END
+verif_sha_bdo4.v
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/appel/!svn/ver/6771/vst/sha/verif_sha_bdo4.v
+END
+verif_sha_final.v
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/appel/!svn/ver/6804/vst/sha/verif_sha_final.v
+END
+verif_sha_bdo7.v
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/appel/!svn/ver/6771/vst/sha/verif_sha_bdo7.v
+END
+verif_sha_bdo8.v
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/appel/!svn/ver/6814/vst/sha/verif_sha_bdo8.v
+END
+spec_hmac.v
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/appel/!svn/ver/6812/vst/sha/spec_hmac.v
+END
+spec_sha.v
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/appel/!svn/ver/6815/vst/sha/spec_sha.v
+END
+common_lemmas.v
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/appel/!svn/ver/6815/vst/sha/common_lemmas.v
+END
+HMAC_proofTail.v
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/appel/!svn/ver/6748/vst/sha/HMAC_proofTail.v
+END
+sha.c
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/appel/!svn/ver/6804/vst/sha/sha.c
+END
+sha.h
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/appel/!svn/ver/6812/vst/sha/sha.h
+END
+hmac_sha256.v
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/appel/!svn/ver/6740/vst/sha/hmac_sha256.v
+END
+bdo_lemmas.v
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/appel/!svn/ver/6376/vst/sha/bdo_lemmas.v
+END
+verif_hmac_update.v
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/appel/!svn/ver/6812/vst/sha/verif_hmac_update.v
+END
+HMAC_lemmas.v
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/appel/!svn/ver/6810/vst/sha/HMAC_lemmas.v
+END
+verif_sha_update.v
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/appel/!svn/ver/6804/vst/sha/verif_sha_update.v
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/appel/!svn/ver/6086/vst/sha/Makefile
+END
+HMAC_LoopBodyGT.v
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/appel/!svn/ver/6761/vst/sha/HMAC_LoopBodyGT.v
+END
+sha.v
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/appel/!svn/ver/6804/vst/sha/sha.v
+END
+HMAC_part2GT.v
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/appel/!svn/ver/6761/vst/sha/HMAC_part2GT.v
+END
+verif_hmac_final.v
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/appel/!svn/ver/6812/vst/sha/verif_hmac_final.v
+END
+HMAC_proof.v
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/appel/!svn/ver/6761/vst/sha/HMAC_proof.v
+END
+HMAC_functional_prog.v
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/appel/!svn/ver/6810/vst/sha/HMAC_functional_prog.v
+END
+hmac091c.c
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/appel/!svn/ver/6812/vst/sha/hmac091c.c
+END
+verif_addlength.v
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/appel/!svn/ver/6751/vst/sha/verif_addlength.v
+END
+verif_hmac_init.v
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/appel/!svn/ver/6812/vst/sha/verif_hmac_init.v
+END
+functional_prog.v
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/appel/!svn/ver/6679/vst/sha/functional_prog.v
+END
+verif_sha_init.v
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/appel/!svn/ver/6651/vst/sha/verif_sha_init.v
+END
+HMAC_refined_fp.v
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/appel/!svn/ver/6761/vst/sha/HMAC_refined_fp.v
+END
+verif_sha_bdo.v
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/appel/!svn/ver/6771/vst/sha/verif_sha_bdo.v
+END
+verif_sha_update2.v
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/appel/!svn/ver/6804/vst/sha/verif_sha_update2.v
+END
+verif_sha_update3.v
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/appel/!svn/ver/6804/vst/sha/verif_sha_update3.v
+END
+verif_sha_update4.v
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/appel/!svn/ver/6804/vst/sha/verif_sha_update4.v
+END
+entail_examples2.v
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/appel/!svn/ver/6378/vst/sha/entail_examples2.v
+END
+HMAC_proofLE.v
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/appel/!svn/ver/6761/vst/sha/HMAC_proofLE.v
+END
+HMAC_LoopBodyLE.v
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/appel/!svn/ver/6761/vst/sha/HMAC_LoopBodyLE.v
+END
+HMAC_part2LE.v
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/appel/!svn/ver/6761/vst/sha/HMAC_part2LE.v
+END
+verif_sha_final2.v
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/appel/!svn/ver/6771/vst/sha/verif_sha_final2.v
+END
+verif_sha_final3.v
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/appel/!svn/ver/6771/vst/sha/verif_sha_final3.v
+END
+HMAC_definitions.v
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/appel/!svn/ver/6761/vst/sha/HMAC_definitions.v
+END
+verif_SHA256.v
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/appel/!svn/ver/6771/vst/sha/verif_SHA256.v
+END
+hmac091c.v
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/appel/!svn/ver/6812/vst/sha/hmac091c.v
+END
+verif_sha.v
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/appel/!svn/ver/6086/vst/sha/verif_sha.v
+END
+SHA256.v
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/appel/!svn/ver/6815/vst/sha/SHA256.v
+END
+sha_lemmas.v
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/appel/!svn/ver/6815/vst/sha/sha_lemmas.v
+END
+pure_lemmas.v
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/appel/!svn/ver/6815/vst/sha/pure_lemmas.v
+END
+verif_hmac_cleanup.v
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/appel/!svn/ver/6812/vst/sha/verif_hmac_cleanup.v
+END

@@ -1,0 +1,134 @@
+DIGEST 2900aea261da4d3a24548f8da511e204
+Fcompcert.exportclight.Clightdefs
+R1135:1138 Coq.Lists.List <> <> lib
+R1156:1161 Coq.ZArith.ZArith <> <> lib
+R1179:1186 compcert.lib.Integers <> <> lib
+R1204:1209 compcert.lib.Floats <> <> lib
+R1227:1229 compcert.common.AST <> <> lib
+R1247:1252 compcert.cfrontend.Ctypes <> <> lib
+R1270:1272 compcert.cfrontend.Cop <> <> lib
+R1290:1295 compcert.cfrontend.Clight <> <> lib
+def 1310:1314 <> tvoid
+R1319:1323 compcert.cfrontend.Ctypes <> Tvoid constr
+def 1337:1342 <> tschar
+R1347:1350 compcert.cfrontend.Ctypes <> Tint constr
+R1362:1367 compcert.cfrontend.Ctypes <> noattr def
+R1355:1360 compcert.cfrontend.Ctypes <> Signed constr
+R1352:1353 compcert.cfrontend.Ctypes <> I8 constr
+def 1381:1386 <> tuchar
+R1391:1394 compcert.cfrontend.Ctypes <> Tint constr
+R1408:1413 compcert.cfrontend.Ctypes <> noattr def
+R1399:1406 compcert.cfrontend.Ctypes <> Unsigned constr
+R1396:1397 compcert.cfrontend.Ctypes <> I8 constr
+def 1427:1432 <> tshort
+R1437:1440 compcert.cfrontend.Ctypes <> Tint constr
+R1453:1458 compcert.cfrontend.Ctypes <> noattr def
+R1446:1451 compcert.cfrontend.Ctypes <> Signed constr
+R1442:1444 compcert.cfrontend.Ctypes <> I16 constr
+def 1472:1478 <> tushort
+R1483:1486 compcert.cfrontend.Ctypes <> Tint constr
+R1501:1506 compcert.cfrontend.Ctypes <> noattr def
+R1492:1499 compcert.cfrontend.Ctypes <> Unsigned constr
+R1488:1490 compcert.cfrontend.Ctypes <> I16 constr
+def 1520:1523 <> tint
+R1528:1531 compcert.cfrontend.Ctypes <> Tint constr
+R1544:1549 compcert.cfrontend.Ctypes <> noattr def
+R1537:1542 compcert.cfrontend.Ctypes <> Signed constr
+R1533:1535 compcert.cfrontend.Ctypes <> I32 constr
+def 1563:1567 <> tuint
+R1572:1575 compcert.cfrontend.Ctypes <> Tint constr
+R1590:1595 compcert.cfrontend.Ctypes <> noattr def
+R1581:1588 compcert.cfrontend.Ctypes <> Unsigned constr
+R1577:1579 compcert.cfrontend.Ctypes <> I32 constr
+def 1609:1613 <> tbool
+R1618:1621 compcert.cfrontend.Ctypes <> Tint constr
+R1638:1643 compcert.cfrontend.Ctypes <> noattr def
+R1629:1636 compcert.cfrontend.Ctypes <> Unsigned constr
+R1623:1627 compcert.cfrontend.Ctypes <> IBool constr
+def 1657:1661 <> tlong
+R1666:1670 compcert.cfrontend.Ctypes <> Tlong constr
+R1679:1684 compcert.cfrontend.Ctypes <> noattr def
+R1672:1677 compcert.cfrontend.Ctypes <> Signed constr
+def 1698:1703 <> tulong
+R1708:1712 compcert.cfrontend.Ctypes <> Tlong constr
+R1723:1728 compcert.cfrontend.Ctypes <> noattr def
+R1714:1721 compcert.cfrontend.Ctypes <> Unsigned constr
+def 1742:1747 <> tfloat
+R1752:1757 compcert.cfrontend.Ctypes <> Tfloat constr
+R1763:1768 compcert.cfrontend.Ctypes <> noattr def
+R1759:1761 compcert.cfrontend.Ctypes <> F32 constr
+def 1782:1788 <> tdouble
+R1793:1798 compcert.cfrontend.Ctypes <> Tfloat constr
+R1804:1809 compcert.cfrontend.Ctypes <> noattr def
+R1800:1802 compcert.cfrontend.Ctypes <> F64 constr
+def 1823:1826 <> tptr
+R1832:1835 compcert.cfrontend.Ctypes <> type ind
+R1841:1848 compcert.cfrontend.Ctypes <> Tpointer constr
+R1852:1857 compcert.cfrontend.Ctypes <> noattr def
+R1850:1850 compcert.exportclight.Clightdefs <> t var
+def 1871:1876 <> tarray
+R1882:1885 compcert.cfrontend.Ctypes <> type ind
+R1893:1893 Coq.Numbers.BinNums <> Z ind
+R1899:1904 compcert.cfrontend.Ctypes <> Tarray constr
+R1911:1916 compcert.cfrontend.Ctypes <> noattr def
+R1908:1909 compcert.exportclight.Clightdefs <> sz var
+R1906:1906 compcert.exportclight.Clightdefs <> t var
+def 1931:1943 <> volatile_attr
+R1951:1993 compcert.cfrontend.Ctypes <> mk_attr constr
+R1990:1993 Coq.Init.Datatypes <> None constr
+R1968:1971 Coq.Init.Datatypes <> true constr
+def 2011:2015 <> tattr
+R2021:2024 compcert.cfrontend.Ctypes <> attr rec
+R2032:2035 compcert.cfrontend.Ctypes <> type ind
+R2049:2050 compcert.exportclight.Clightdefs <> ty var
+R2061:2065 compcert.cfrontend.Ctypes <> Tvoid constr
+R2070:2074 compcert.cfrontend.Ctypes <> Tvoid constr
+R2080:2083 compcert.cfrontend.Ctypes <> Tint constr
+R2096:2099 compcert.cfrontend.Ctypes <> Tint constr
+R2107:2107 compcert.exportclight.Clightdefs <> a var
+R2113:2117 compcert.cfrontend.Ctypes <> Tlong constr
+R2127:2131 compcert.cfrontend.Ctypes <> Tlong constr
+R2136:2136 compcert.exportclight.Clightdefs <> a var
+R2142:2147 compcert.cfrontend.Ctypes <> Tfloat constr
+R2157:2162 compcert.cfrontend.Ctypes <> Tfloat constr
+R2167:2167 compcert.exportclight.Clightdefs <> a var
+R2173:2180 compcert.cfrontend.Ctypes <> Tpointer constr
+R2191:2198 compcert.cfrontend.Ctypes <> Tpointer constr
+R2204:2204 compcert.exportclight.Clightdefs <> a var
+R2210:2215 compcert.cfrontend.Ctypes <> Tarray constr
+R2229:2234 compcert.cfrontend.Ctypes <> Tarray constr
+R2243:2243 compcert.exportclight.Clightdefs <> a var
+R2249:2257 compcert.cfrontend.Ctypes <> Tfunction constr
+R2274:2282 compcert.cfrontend.Ctypes <> Tfunction constr
+R2300:2306 compcert.cfrontend.Ctypes <> Tstruct constr
+R2320:2326 compcert.cfrontend.Ctypes <> Tstruct constr
+R2335:2335 compcert.exportclight.Clightdefs <> a var
+R2341:2346 compcert.cfrontend.Ctypes <> Tunion constr
+R2360:2365 compcert.cfrontend.Ctypes <> Tunion constr
+R2374:2374 compcert.exportclight.Clightdefs <> a var
+R2380:2388 compcert.cfrontend.Ctypes <> Tcomp_ptr constr
+R2398:2406 compcert.cfrontend.Ctypes <> Tcomp_ptr constr
+R2411:2411 compcert.exportclight.Clightdefs <> a var
+def 2432:2440 <> tvolatile
+R2447:2450 compcert.cfrontend.Ctypes <> type ind
+R2456:2460 compcert.exportclight.Clightdefs <> tattr def
+R2476:2477 compcert.exportclight.Clightdefs <> ty var
+R2462:2474 compcert.exportclight.Clightdefs <> volatile_attr def
+def 2492:2499 <> talignas
+R2505:2505 Coq.Numbers.BinNums <> N ind
+R2513:2516 compcert.cfrontend.Ctypes <> type ind
+R2524:2528 compcert.exportclight.Clightdefs <> tattr def
+R2583:2584 compcert.exportclight.Clightdefs <> ty var
+R2533:2578 compcert.cfrontend.Ctypes <> mk_attr constr
+R2573:2576 Coq.Init.Datatypes <> Some constr
+R2578:2578 compcert.exportclight.Clightdefs <> n var
+R2550:2554 Coq.Init.Datatypes <> false constr
+def 2599:2615 <> tvolatile_alignas
+R2621:2621 Coq.Numbers.BinNums <> N ind
+R2629:2632 compcert.cfrontend.Ctypes <> type ind
+R2640:2644 compcert.exportclight.Clightdefs <> tattr def
+R2698:2699 compcert.exportclight.Clightdefs <> ty var
+R2649:2693 compcert.cfrontend.Ctypes <> mk_attr constr
+R2688:2691 Coq.Init.Datatypes <> Some constr
+R2693:2693 compcert.exportclight.Clightdefs <> n var
+R2666:2669 Coq.Init.Datatypes <> true constr

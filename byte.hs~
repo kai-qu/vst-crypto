@@ -1,0 +1,3 @@
+
+byte_to_bit :: Int -> [Bool]
+byte_to_bit x = [true]

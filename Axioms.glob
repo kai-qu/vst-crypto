@@ -1,0 +1,28 @@
+DIGEST 2dc200d4c4c266ae4462f26fee4230d8
+FAxioms
+R250:263 Coq.Logic.ClassicalFacts <> <> lib
+R734:757 Coq.Logic.FunctionalExtensionality <> <> lib
+prf 884:897 <> extensionality
+R933:933 Axioms <> B var
+R928:928 Axioms <> A var
+R964:966 Coq.Init.Logic <> :type_scope:x_'='_x not
+R963:963 Axioms <> f var
+R967:967 Axioms <> g var
+R952:954 Coq.Init.Logic <> :type_scope:x_'='_x not
+R949:949 Axioms <> f var
+R951:951 Axioms <> x var
+R955:955 Axioms <> g var
+R957:957 Axioms <> x var
+R991:1015 Coq.Logic.FunctionalExtensionality <> functional_extensionality thm
+R991:1015 Coq.Logic.FunctionalExtensionality <> functional_extensionality thm
+R1049:1062 Axioms <> extensionality thm
+ax 1125:1132 <> prop_ext
+R1135:1168 Coq.Logic.ClassicalFacts <> prop_extensionality def
+R1190:1197 Axioms <> prop_ext prfax
+prf 1334:1342 <> proof_irr
+R1345:1376 Coq.Logic.ClassicalFacts <> proof_irrelevance def
+R1395:1437 Coq.Logic.ClassicalFacts <> ext_prop_dep_proof_irrel_cic thm
+R1439:1446 Axioms <> prop_ext prfax
+R1395:1437 Coq.Logic.ClassicalFacts <> ext_prop_dep_proof_irrel_cic thm
+R1439:1446 Axioms <> prop_ext prfax
+R1474:1482 Axioms <> proof_irr thm

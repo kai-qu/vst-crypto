@@ -1,0 +1,122 @@
+DIGEST 905146758d23fac8ac2be357ea7875b0
+Fbase
+R248:261 Extensionality <> <> lib
+R279:282 Coq.Lists.List <> <> lib
+R300:303 Coq.Bool.Bool <> <> lib
+R321:325 Coq.omega.Omega <> <> lib
+R343:351 Coq.Relations.Relations <> <> lib
+def 367:373 <> compose
+R396:396 base <> C var
+R391:391 base <> B var
+R407:407 base <> B var
+R402:402 base <> A var
+R422:422 base <> g var
+R425:425 base <> f var
+R427:427 base <> x var
+R450:456 base <> compose def
+R481:487 base <> compose def
+not 473 <> ::x_'oo'_x
+prf 532:544 <> compose_assoc
+R567:567 base <> D var
+R564:564 base <> C var
+R576:576 base <> C var
+R573:573 base <> B var
+R585:585 base <> B var
+R582:582 base <> A var
+R605:607 Coq.Init.Logic <> :type_scope:x_'='_x not
+R592:592 base <> ::x_'oo'_x not
+R599:603 base <> ::x_'oo'_x not
+R594:597 base <> ::x_'oo'_x not
+R593:593 base <> h var
+R598:598 base <> g var
+R604:604 base <> f var
+R609:612 base <> ::x_'oo'_x not
+R608:608 base <> h var
+R614:617 base <> ::x_'oo'_x not
+R613:613 base <> g var
+R618:618 base <> f var
+R644:657 Axioms <> extensionality thm
+R676:682 base <> compose def
+R644:657 Axioms <> extensionality thm
+def 708:709 <> id
+R729:729 base <> A var
+R734:734 base <> x var
+prf 744:751 <> id_unit1
+R772:772 base <> B var
+R769:769 base <> A var
+R785:787 Coq.Init.Logic <> :type_scope:x_'='_x not
+R777:780 base <> ::x_'oo'_x not
+R776:776 base <> f var
+R781:782 base <> id def
+R784:784 base <> A var
+R788:788 base <> f var
+R814:827 Axioms <> extensionality thm
+R814:827 Axioms <> extensionality thm
+prf 857:864 <> id_unit2
+R885:885 base <> B var
+R882:882 base <> A var
+R898:900 Coq.Init.Logic <> :type_scope:x_'='_x not
+R893:896 base <> ::x_'oo'_x not
+R889:890 base <> id def
+R892:892 base <> B var
+R897:897 base <> f var
+R901:901 base <> f var
+R927:940 Axioms <> extensionality thm
+R927:940 Axioms <> extensionality thm
+constr 1002:1010 <> Bijection
+rec 971:979 <> bijection
+proj 1016:1020 <> bij_f
+proj 1033:1037 <> bij_g
+proj 1050:1055 <> bij_fg
+proj 1091:1096 <> bij_gf
+R1028:1028 base <> B var
+R1023:1023 base <> A var
+R1045:1045 base <> A var
+R1040:1040 base <> B var
+R1083:1085 Coq.Init.Logic <> :type_scope:x_'='_x not
+R1068:1072 base <> bij_f meth
+R1075:1079 base <> bij_g meth
+R1081:1081 base <> x var
+R1086:1086 base <> x var
+R1124:1126 Coq.Init.Logic <> :type_scope:x_'='_x not
+R1109:1113 base <> bij_g meth
+R1116:1120 base <> bij_f meth
+R1122:1122 base <> x var
+R1127:1127 base <> x var
+prf 1139:1147 <> bij_f_inj
+R1163:1171 base <> bijection rec
+R1175:1175 base <> B var
+R1173:1173 base <> A var
+R1235:1235 Coq.Init.Logic <> :type_scope:x_'='_x not
+R1234:1234 base <> x var
+R1236:1236 base <> y var
+R1212:1214 Coq.Init.Logic <> :type_scope:x_'='_x not
+R1197:1201 base <> bij_f proj
+R1211:1211 base <> x var
+R1207:1209 base <> bij var
+R1215:1219 base <> bij_f proj
+R1229:1229 base <> y var
+R1225:1227 base <> bij var
+R1266:1271 base <> bij_gf proj
+R1266:1271 base <> bij_gf proj
+R1297:1302 base <> bij_gf proj
+R1297:1302 base <> bij_gf proj
+prf 1346:1354 <> bij_g_inj
+R1370:1378 base <> bijection rec
+R1382:1382 base <> B var
+R1380:1380 base <> A var
+R1442:1442 Coq.Init.Logic <> :type_scope:x_'='_x not
+R1441:1441 base <> x var
+R1443:1443 base <> y var
+R1419:1421 Coq.Init.Logic <> :type_scope:x_'='_x not
+R1404:1408 base <> bij_g proj
+R1418:1418 base <> x var
+R1414:1416 base <> bij var
+R1422:1426 base <> bij_g proj
+R1436:1436 base <> y var
+R1432:1434 base <> bij var
+R1473:1478 base <> bij_fg proj
+R1473:1478 base <> bij_fg proj
+R1504:1509 base <> bij_fg proj
+R1504:1509 base <> bij_fg proj
+R5111:5115 Coq.Init.Logic <> False ind
