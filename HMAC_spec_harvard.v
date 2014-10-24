@@ -12,15 +12,18 @@ Require Import Coqlib.
 
 Definition Blist := list bool.
 
-Fixpoint splitVector(A : Set)(n m : nat) : Vector.t A (n + m) -> (Vector.t A n * Vector.t A m) :=
+Fixpoint splitVector (A : Set) (n m : nat) :
+  Vector.t A (n + m) -> (Vector.t A n * Vector.t A m) :=
   match n with
     | 0%nat => 
-      fun (v : Vector.t A (O + m)) => (@Vector.nil A, v)
+      fun (v : Vector.t A (O + m)) => (@Vector.nil A, v) (* why the function? TODO *)
     | S n' => 
       fun (v : Vector.t A (S n' + m)) => 
         let (v1, v2) := splitVector _ _ (Vector.tl v) in
           (Vector.cons _ (Vector.hd v) _ v1, v2)
   end.
+
+Eval compute in splitVector 1 2 [true; true; true].
 
 Section HMAC.
 
@@ -189,7 +192,7 @@ Inductive bytes_bits_lists : list Z -> Blist -> Prop :=
   | eq_cons : forall (bytes : list Z) (bits : Blist)
                      (byte : Z) (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
                 bytes_bits_lists bytes bits ->
-                convertByteBits byte ([b0; b1; b2; b3; b4; b5; b6; b7]) ->
+                convertByteBits byte [b0; b1; b2; b3; b4; b5; b6; b7] ->
                 bytes_bits_lists (byte :: bytes)
                                 (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits)
 .
@@ -200,18 +203,24 @@ toBvector (bytes_to_bits h) = H
 this is *almost* the same as bytes_bits_vector, except just c, not c + p
  *)
 (* note: need to name c in order to use in Bvector c -- but then need to use names *)
-Inductive bytes_bits_vector' (len : nat) (bytes : list Z) (bits : Bvector len) : Prop :=
-  | eq_empty_v : bytes = nil -> len = 0%nat -> bytes_bits_vector' bytes bits
-  (* remove -> from eq_empty_v TODO *)
-  | eq_cons_v : bytes_bits_vector' bytes bits
-      (* forall (len' : nat) (bytes' : list Z) (bits' : Bvector len)
+Inductive bytes_bits_vector_wrong (len : nat) (bytes : list Z) (bits : Bvector len) : Prop :=
+  | eq_empty_v' : bytes = nil -> len = 0%nat -> bytes_bits_vector_wrong bytes bits
+  | eq_cons_v' : bytes_bits_vector_wrong bytes bits.
+
+(*
+Inductive bytes_bits_vector' (l : list Z) : Bvector (8 * length l) -> Prop :=
+  | eq_empty_v : forall (bits : Bvector (8 * length nil)),
+                   bytes_bits_vector' nil bits
+  (* TODO: might want to use Vector.nil bool? *)
+  | eq_cons_v : forall (bytes : list Z) (bits : Bvector (8 * length bytes))
                        (byte : Z) (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
-                  bytes_bits_vector' bytes' bits' ->
-                  convertByteBits byte ([b0; b1; b2; b3; b4; b5; b6; b7]) ->
-                  bytes_bits_vector' (byte :: bytes')
-                                   (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits')
-      *) (* TODO *)
+                  bytes_bits_vector' bytes bits ->
+                  convertByteBits byte [b0; b1; b2; b3; b4; b5; b6; b7] ->
+                  bytes_bits_vector' (byte :: bytes)
+                                     (* TODO: is this the right endianness? *)
+                                     (Vector.append [b0; b1; b2; b3; b4; b5; b6; b7] bits)
 .
+*)
 (* TODO: compare to rel1. How do dependent types and inductive props work? *)
 
 Check bytes_bits_vector.
@@ -243,35 +252,18 @@ why pad the key? why not just let it be size b?
 
 (* ----------------------------------------- Theorem and parameters *)
 
-Parameter sha_iv : Bvector (SHA256_.DigestLength * 8).
-
-(* Definition sha_h : list Z -> list Z := SHA256_.Hash. *)
-(* TODO: c = 32, p = 32 *)
-Parameter sha_h : forall (c p : nat) (b:nat -> nat -> nat), Bvector c -> Bvector (b c p) -> Bvector c.
-
-(* corresponds to block size. b = plus *)
-
-(* TODO: email adam about fpad: it's not padding the key *)
-
-(*  "Blist -> list (Bvector (b SHA256_.DigestLength c))" *)
-Parameter sha_splitandpad_vector :
-  forall (p: nat), Blist -> list (Bvector (SHA256_.DigestLength * 8 + p)).
-
-Parameter fpad : forall (p : nat), Bvector p.
-
 (* want Bvector b = 512 bits *)
 Print Byte.int.
 Print Byte.repr.
 Check Byte.unsigned.
 Check HMAC_SHA256.sixtyfour.
-(*
-Definition opad := 
+
+Definition opad_test := 
      bytes_to_bits
-                     (map Byte.unsigned (HMAC_SHA256.sixtyfour HMAC_SHA256.Opad)).
-Check opad. 
-Definition ipad := bytes_to_bits
-                     (map Byte.unsigned (HMAC_SHA256.sixtyfour HMAC_SHA256.Ipad)).
-*)
+                     (map Byte.unsigned (HMAC_SHA256.sixtyfour (Byte.repr 52))).
+Check opad_test. 
+(* Definition ipad_test := bytes_to_bits
+                     (map Byte.unsigned (HMAC_SHA256.sixtyfour HMAC_SHA256.Ipad)). *)
 
 (*
 TODO: 8/20/14
@@ -311,6 +303,22 @@ Check (HMAC (sha_h p plus) sha_iv).
 *)
 Definition p:=(32 * 8)%nat.
 
+Parameter sha_iv : Bvector (SHA256_.DigestLength * 8).
+
+(* Definition sha_h : list Z -> list Z := SHA256_.Hash. *)
+(* TODO: c = 32, p = 32 *)
+Parameter sha_h : Bvector c -> Bvector (c + p) -> Bvector c.
+
+(* corresponds to block size. b = plus *)
+
+(* TODO: email adam about fpad: it's not padding the key *)
+
+(*  "Blist -> list (Bvector (b SHA256_.DigestLength c))" *)
+Parameter sha_splitandpad_vector :
+  Blist -> list (Bvector (SHA256_.DigestLength * 8 + p)).
+
+Parameter fpad : Bvector p.
+
 (* Define opad, define ipad, pass converted ipad/opad to respective hmacs *)
 
 (* Is this the theorem we want? Is it useful for the rest of the proofs?
@@ -318,22 +326,53 @@ Should it be more abstract? *)
 
 (* TODO: opad <> ipad? *)
 (* TODO fill this in *)
+(* relies on bytes_bits_vector' too *)
 Parameter bytes_bits_conv_vector' : byte -> Bvector (plus c p) -> Prop.
+(* Does something like: 
+bytes_bits_vector' (map Byte.unsigned (sixtyfour opad)) OPAD *)
+
+(*  (let (k_Out, k_In) :=
+                       splitVector (b 256 256) (b 256 256)
+                         (Vector.append (BVxor (b 256 256) K OP)
+                            (BVxor (b 256 256) K IP)) in 
+Possibly try n = m -> splitVector n m...
+*)
+
+SearchAbout Bvector.
+(* SearchAbout Vector. *)
+
+Lemma empty_vector : forall (v : Bvector 0),
+                       v = [].
+Proof.
+  intros v.
+  (* destruct v. *)
+
+Admitted.
+
+Lemma split_append_id : forall (len : nat) (v1 v2 : Bvector len),
+                          splitVector len len (Vector.append v1 v2) = (v1, v2).
+Proof.
+  induction len; intros v1 v2.
+  (* Case len = 0 *)
+    (* simpl. rewrite -> empty_vector. *)
+
+
+    Admitted.
 
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
                             (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
                             (op ip : byte) (OP IP : Bvector (plus c p)),
   ((length k) * 8)%nat = b c p ->
-  bytes_bits_vector' k K ->
+  bytes_bits_vector_wrong k K ->
   (* 1. not separating c and p 2. inductive prop / dep types? 3. computation / dep types?
      bytes_bits_vector' k K vs. bytes_to_bits k = K <- can't prove lens equal?*)
   bytes_bits_lists m M ->
   bytes_bits_conv_vector' op OP ->
   bytes_bits_conv_vector' ip IP ->
-  HMAC (sha_h p plus) sha_iv (sha_splitandpad_vector p) (fpad p) OP IP K M = H ->
+  HMAC sha_h sha_iv sha_splitandpad_vector fpad OP IP K M = H ->
   HMAC_SHA256.HMAC op ip m k = h -> (* m k, not k m *)
-  bytes_bits_vector' h H.
+  bytes_bits_vector_wrong h H.
 Proof.  
   intros k m h K M H op ip OP IP.
   intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
@@ -345,13 +384,40 @@ Proof.
   unfold HMAC_SHA256.HMAC in *.
 
   unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
-  (* Still abstract: sha_h, sha_splitandpad_vector, fpad *)
+  (* Still abstract: sha_h, sha_splitandpad_vector, fpad,
+     bytes_bits_vector', bytes_bits_conv_vector' *)
+  rewrite -> split_append_id in HMAC_abstract. (* wow! *)
 
   unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
     unfold HMAC_SHA256.outerArg in *. unfold HMAC_SHA256.innerArg in *.
+    unfold HMAC_SHA256.mkArgZ in *. unfold HMAC_SHA256.mkArg in *.
 
+  unfold BVxor in *. unfold xorb in *. (* unfold Vector.map2 in *. *)
+  unfold Byte.xor in *. (* unfold Z.lxor in *. *)
+
+    (* Lemma:
+
+BVxor (b 256 256) K OP = Vector.map2 xorb K OP (can unfold xorb) 
+     ~
+                          (map
+                          (fun p0 : byte * byte => Byte.xor (fst p0) (snd p0))
+                          (combine (map Byte.repr (HMAC_SHA256.mkKey k))
+                             (HMAC_SHA256.sixtyfour ip)))
+
+plus i probably want a meta-lemma for composition of relations
+r1 x X -> r2 y Y -> f x y ~ F X Y
+
+figure out how to approach proof: 4-way induction sounds painful
+
+ *)
+
+    
   rewrite <- HMAC_abstract.
   rewrite <- HMAC_concrete.
+
+  
+  
+  induction msgs_eq.
 
 
 Abort.
