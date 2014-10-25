@@ -131,18 +131,59 @@ Fixpoint iterate (n : nat) (byte : nat) : Bvector n :=
   match n as x return Bvector x with
     | O => Vector.nil bool
     | S n' =>
-      let byte_subtract := (byte - NPeano.pow 2 (n - 1))%nat in
-      let bool_digit := leb byte_subtract 0 in
+      let byte_subtract := (byte - NPeano.pow 2 n')%nat in
+      let bool_digit := negb (leb byte_subtract 0) in
       let num_new := if bool_digit then byte_subtract else byte in
       Vector.append (iterate n' num_new) [bool_digit] (* could reverse instead *)
   end.
 
-Fixpoint byte_to_bits (byte : Z) : Bvector 8 :=
-  let max_pow_two := 7 in
-  iterate (max_pow_two + 1) (nat_of_Z byte).
 *)
 
-Parameter byte_to_bits : Z -> Bvector 8.
+Lemma add_1_r_S : forall (n : nat), (n + 1)%nat = S n.
+Proof.
+  induction n.
+    reflexivity.
+    simpl. rewrite -> IHn. reflexivity.
+Defined.
+
+(* TODO step through this *)
+Locate leb. Check negb.
+(* little-endian *)
+Fixpoint iterate (n : nat) (byte : nat) : Bvector n.
+Proof.
+  destruct n.
+     apply (Vector.nil bool).
+  remember ((byte - NPeano.pow 2 n)%nat) as byte_subtract.
+  remember (negb (leb byte_subtract 0)) as bool_digit. (* changed from leb: gt now *)
+  remember (if bool_digit then byte_subtract else byte) as num_new.
+  rewrite <- add_1_r_S.
+  apply (Vector.append (iterate n num_new) [bool_digit]). (* n' *)
+Defined.
+
+Print iterate.
+Eval compute in iterate 1 255.
+Check eq_rec. Print eq_rec. Print eq_rect. Check eq_rect.
+Print NPeano.Nat.add_1_r.
+
+(* TODO: fix the latter + 1 *)
+Fixpoint byte_to_bits (byte : Z) : Bvector 8 :=
+  let max_pow_two := 7%nat in
+  iterate (max_pow_two + 1) (nat_of_Z byte + 1).
+
+  Print add_1_r_S.
+Eval compute in iterate 8 2.
+Eval compute in byte_to_bits 0.
+Eval compute in byte_to_bits 1.
+Eval compute in byte_to_bits 2.
+
+Eval compute in byte_to_bits 127.
+Eval compute in byte_to_bits 128.
+Eval compute in byte_to_bits 129.
+Eval compute in byte_to_bits 200.
+Eval compute in byte_to_bits 255. 
+Eval compute in byte_to_bits 256. (* not valid *)
+
+(* Parameter byte_to_bits : Z -> Bvector 8. *)
 
 (* Or: concatMap byte_to_bit bytes *)
 Check Bvector.
@@ -156,6 +197,8 @@ Fixpoint bytes_to_bits (bytes : list Z) : Bvector (length bytes * 8) :=
     | nil => Vector.nil bool
     | x :: xs => Vector.append (byte_to_bits x) (bytes_to_bits xs)
   end.
+
+
 
 (* ************* inductive defs *)
   
@@ -221,6 +264,13 @@ Inductive bytes_bits_vector' (l : list Z) : Bvector (8 * length l) -> Prop :=
                                      (Vector.append [b0; b1; b2; b3; b4; b5; b6; b7] bits)
 .
 *)
+
+Fixpoint bytes_bits_vector_comp
+         (bytes : list Z) (bits : Bvector (8 * length bytes)) : bool.
+Proof.
+  
+  
+
 (* TODO: compare to rel1. How do dependent types and inductive props work? *)
 
 Check bytes_bits_vector.
@@ -359,6 +409,18 @@ Proof.
 
     Admitted.
 
+
+(* TODO: 10/25/14
+- figure out old and new fpad (email adam) **
+- step through theorem
+- add lemma for xor **
+- fill in parameters: sha_h, sha_iv, sha_splitandpad_vector, fpad **
+- figure out how to get split lemmas to work
+- get bytes_bits_vector' to work (Fixpoint)?
+   - see if induction works with it
+   - write bytes_bits_conv_vector 
+- figure out how to use relations in theorem
+ *)
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
                             (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
