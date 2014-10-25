@@ -288,6 +288,9 @@ Proof.
   rewrite -> mult_succ_r. rewrite -> plus_comm. reflexivity.
 Defined.
 
+Print mult_succ_r.
+Print plus_comm.
+
 Fixpoint squash_list_vector
          (bits_list : list (Bvector 8)) : Bvector (8 * length bits_list).
 Proof.
@@ -315,8 +318,9 @@ Fixpoint bvector_eq (n : nat) (m : nat) (b1 : Bvector n) (b2 : Bvector m) : bool
   end.
   
 (* TODO watch out for endianness *)
-Fixpoint bytes_bits_vector_comp
-         (bytes : list Z) (bits : Bvector (8 * length bytes)) : bool.
+  
+Definition bytes_bits_vector_comp
+         (n : nat) (bytes : list Z) (bits : Bvector n) : bool.
 Proof.
   remember (map byte_to_bits bytes) as bits_list_vector.
   remember (squash_list_vector bits_list_vector) as bvector.
@@ -324,19 +328,23 @@ Proof.
     rewrite -> Heqbits_list_vector.
     rewrite -> list_length_map.
     reflexivity.
-  rewrite -> len_eq in bits.
+  (* rewrite -> len_eq in bits. *)
   apply (bvector_eq bvector bits).
 Defined.
 
 Print bytes_bits_vector_comp.
 (* Seems hard to use in a proof... *)
 
-(* TODO: generates 20k-line expr *)
-(* Eval compute in
-    bytes_bits_vector_comp (0 :: nil) [true; true; true; true; true; true; true; true]. *)
-  
+(* TODO: get this to be required *)
+Eval compute in
+    bytes_bits_vector_comp (0 :: nil) [true; true; true; true; true; true; true; true].
 
-(* TODO: compare to rel1. How do dependent types and inductive props work? *)
+Lemma bytes_bits_vector_comp_len : forall (n : nat) (bytes : list Z) (bits : Bvector n),
+                                     bytes_bits_vector_comp bytes bits = true
+                                     -> n = (8 * length bytes)%nat.
+Proof.
+  (* TODO: bvector_eq is true iff the vectors are the same length *)
+Admitted.  
 
 Check bytes_bits_vector.
 Check HMAC_SHA256.HMAC.         (* ? *)
@@ -380,30 +388,6 @@ Check opad_test.
 (* Definition ipad_test := bytes_to_bits
                      (map Byte.unsigned (HMAC_SHA256.sixtyfour HMAC_SHA256.Ipad)). *)
 
-(*
-TODO: 8/20/14
-
-Key is not being padded? Need to assume the padded key is of length b
-Email Adam about fpad: it's not used to pad the key
-Figure out what parameters are
-Fill in the relations
-
-Byte to bits: computational vs. prop
-  bytes_bits_vector: problem
-  bytes_to_bits: 2 problems
-  still need the computational version for opad?
-
-Modify the theorem:
- parametrize C HMAC by OPAD and IPAD + they need to be different in at least one bit
-   (email adam: does he use this in his proof?)
-
-Now, write individual functions and prove them equivalent? they have different types
-Still abstract: sha_h, sha_splitandpad, fpad?
-
-Figure out what lemmas to prove (Look in HMAC_Lemmas)
-
-Lennart: update spec to take ipad and opad as parameters
- *)
 Check HMAC.
 
 (* ------------------------------------- *)
@@ -426,8 +410,6 @@ Parameter sha_h : Bvector c -> Bvector (c + p) -> Bvector c.
 
 (* corresponds to block size. b = plus *)
 
-(* TODO: email adam about fpad: it's not padding the key *)
-
 (*  "Blist -> list (Bvector (b SHA256_.DigestLength c))" *)
 Parameter sha_splitandpad_vector :
   Blist -> list (Bvector (SHA256_.DigestLength * 8 + p)).
@@ -442,9 +424,18 @@ Should it be more abstract? *)
 (* TODO: opad <> ipad? *)
 (* TODO fill this in *)
 (* relies on bytes_bits_vector' too *)
-Parameter bytes_bits_conv_vector' : byte -> Bvector (plus c p) -> Prop.
+Parameter bytes_bits_conv_vector : byte -> Bvector (plus c p) -> Prop.
 (* Does something like: 
 bytes_bits_vector' (map Byte.unsigned (sixtyfour opad)) OPAD *)
+
+Locate sixtyfour.
+
+Definition bytes_bits_conv_vector'
+           (byte_pad : byte) (bits_pad : Bvector (c + p)) : bool :=
+  let bytes_pad := map Byte.unsigned (HMAC_SHA256.sixtyfour byte_pad) in
+  eqb (bytes_bits_vector_comp bytes_pad bits_pad) true.
+
+(* -------------- *)
 
 (*  (let (k_Out, k_In) :=
                        splitVector (b 256 256) (b 256 256)
@@ -476,16 +467,16 @@ Proof.
 
 
 (* TODO: 10/25/14
-- figure out old and new fpad (email adam) **
+- figure out old and new fpad **
 - add lemma for xor **
 - fill in parameters: sha_h, sha_iv, sha_splitandpad_vector, fpad **
 - figure out how to get split lemmas to work
 - check bytes_bits_vector' fixpoint
-   - get it to to work with theorem **
+   - get it to eval
    - see if induction works with it
-   - write bytes_bits_conv_vector 
+   - write bytes_bits_conv_vector X
 - step through theorem
-  - figure out how to use relations in theorem
+  - figure out how to use relations in theorem: compositional?
 
  *)
 Theorem HMAC_spec_equiv : forall
@@ -494,14 +485,12 @@ Theorem HMAC_spec_equiv : forall
                             (op ip : byte) (OP IP : Bvector (plus c p)),
   ((length k) * 8)%nat = b c p ->
   bytes_bits_vector_wrong k K ->
-  (* 1. not separating c and p 2. inductive prop / dep types? 3. computation / dep types?
-     bytes_bits_vector' k K vs. bytes_to_bits k = K <- can't prove lens equal?*)
   bytes_bits_lists m M ->
-  bytes_bits_conv_vector' op OP ->
-  bytes_bits_conv_vector' ip IP ->
+  bytes_bits_conv_vector' op OP = true ->
+  bytes_bits_conv_vector' ip IP = true ->
   HMAC sha_h sha_iv sha_splitandpad_vector fpad OP IP K M = H ->
   HMAC_SHA256.HMAC op ip m k = h -> (* m k, not k m *)
-  bytes_bits_vector_wrong h H.
+  bytes_bits_vector_comp h H = true.
 Proof.  
   intros k m h K M H op ip OP IP.
   intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
@@ -514,8 +503,8 @@ Proof.
 
   unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
   (* Still abstract: sha_h, sha_splitandpad_vector, fpad,
-     bytes_bits_vector', bytes_bits_conv_vector' *)
-  rewrite -> split_append_id in HMAC_abstract. (* wow! *)
+     bytes_bits_vector', bytes_bits_conv_vector *)
+  rewrite -> split_append_id in HMAC_abstract. 
 
   unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
     unfold HMAC_SHA256.outerArg in *. unfold HMAC_SHA256.innerArg in *.
@@ -533,11 +522,10 @@ BVxor (b 256 256) K OP = Vector.map2 xorb K OP (can unfold xorb)
                           (combine (map Byte.repr (HMAC_SHA256.mkKey k))
                              (HMAC_SHA256.sixtyfour ip)))
 
-plus i probably want a meta-lemma for composition of relations
+probably want a meta-lemma for composition of relations
 r1 x X -> r2 y Y -> f x y ~ F X Y
 
-figure out how to approach proof: 4-way induction sounds painful
-
+figure out how to approach proof: avoid 4-way induction
  *)
 
     
