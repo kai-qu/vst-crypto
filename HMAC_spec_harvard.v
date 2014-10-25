@@ -251,6 +251,19 @@ Inductive bytes_bits_vector_wrong (len : nat) (bytes : list Z) (bits : Bvector l
   | eq_cons_v' : bytes_bits_vector_wrong bytes bits.
 
 (*
+Fixpoint iterate (n : nat) (byte : nat) : Bvector n.
+Proof.
+  destruct n.
+     apply (Vector.nil bool).
+  remember ((byte - NPeano.pow 2 n)%nat) as byte_subtract.
+  remember (negb (leb byte_subtract 0)) as bool_digit. (* changed from leb: gt now *)
+  remember (if bool_digit then byte_subtract else byte) as num_new.
+  rewrite <- add_1_r_S.
+  apply (Vector.append (iterate n num_new) [bool_digit]). (* n' *)
+Defined.
+*)
+
+(*
 Inductive bytes_bits_vector' (l : list Z) : Bvector (8 * length l) -> Prop :=
   | eq_empty_v : forall (bits : Bvector (8 * length nil)),
                    bytes_bits_vector' nil bits
@@ -265,10 +278,62 @@ Inductive bytes_bits_vector' (l : list Z) : Bvector (8 * length l) -> Prop :=
 .
 *)
 
+Lemma list_cons_len {A : Type} :
+      forall (x : A) (xs : list A), length (x :: xs) = (1 + length xs)%nat.
+Proof. intros. reflexivity. Defined.
+
+Lemma mul_dist : forall (n m : nat), (n * (1 + m))%nat = (n + n * m)%nat.
+Proof.
+  intros. simpl.
+  rewrite -> mult_succ_r. rewrite -> plus_comm. reflexivity.
+Defined.
+
+Fixpoint squash_list_vector
+         (bits_list : list (Bvector 8)) : Bvector (8 * length bits_list).
+Proof.
+  destruct bits_list.
+    apply (Vector.nil bool).
+    rewrite -> list_cons_len.
+    rewrite -> mul_dist.
+    (* TODO watch out for endianness *)
+  apply (Vector.append b0 (squash_list_vector bits_list)).
+Defined.  
+
+SearchAbout Vector.cons.
+Check Vector.cons.
+Check Vector.cons bool true 1 [false].
+
+(* TODO: how to write a better dependent pattern match? doesn't use the equality of their len
+writing it as a proof and destructing n or b1/b2 doesn't work
+*)
+Fixpoint bvector_eq (n : nat) (m : nat) (b1 : Bvector n) (b2 : Bvector m) : bool :=
+  match b1, b2 with             (*  match n as n0 return (Bvector n0) with *)
+    | Vector.nil, Vector.nil => true
+    | Vector.cons x1 _ xs1, Vector.cons x2 _ xs2 =>
+      eqb x1 x2 && bvector_eq xs1 xs2
+    | _, _ => false                (* not possible *)
+  end.
+  
+(* TODO watch out for endianness *)
 Fixpoint bytes_bits_vector_comp
          (bytes : list Z) (bits : Bvector (8 * length bytes)) : bool.
 Proof.
-  
+  remember (map byte_to_bits bytes) as bits_list_vector.
+  remember (squash_list_vector bits_list_vector) as bvector.
+  assert (len_eq: length bytes = length bits_list_vector).
+    rewrite -> Heqbits_list_vector.
+    rewrite -> list_length_map.
+    reflexivity.
+  rewrite -> len_eq in bits.
+  apply (bvector_eq bvector bits).
+Defined.
+
+Print bytes_bits_vector_comp.
+(* Seems hard to use in a proof... *)
+
+(* TODO: generates 20k-line expr *)
+(* Eval compute in
+    bytes_bits_vector_comp (0 :: nil) [true; true; true; true; true; true; true; true]. *)
   
 
 (* TODO: compare to rel1. How do dependent types and inductive props work? *)
@@ -412,14 +477,16 @@ Proof.
 
 (* TODO: 10/25/14
 - figure out old and new fpad (email adam) **
-- step through theorem
 - add lemma for xor **
 - fill in parameters: sha_h, sha_iv, sha_splitandpad_vector, fpad **
 - figure out how to get split lemmas to work
-- get bytes_bits_vector' to work (Fixpoint)?
+- check bytes_bits_vector' fixpoint
+   - get it to to work with theorem **
    - see if induction works with it
    - write bytes_bits_conv_vector 
-- figure out how to use relations in theorem
+- step through theorem
+  - figure out how to use relations in theorem
+
  *)
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
