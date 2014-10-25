@@ -8,3 +8,5 @@ From:
 https://svn.princeton.edu/appel/vst/sha/
 
 http://vst.cs.princeton.edu/
+
+Credit for code: L. Beringer, A. Petcher, A. Appel, and collaborators
