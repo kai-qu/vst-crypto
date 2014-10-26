@@ -58,7 +58,6 @@ Print Vector.
 
   Variable splitAndPad : Blist -> list (Bvector b).
 
-  (* TODO examine this hypothesis, prove that MD lemmas imply it *)
   Hypothesis splitAndPad_1_1 : 
     forall b1 b2,
       splitAndPad b1 = splitAndPad b2 ->
@@ -76,12 +75,16 @@ Print Vector.
     let (k_Out, k_In) := splitVector c c k in
     h k_Out (app_fpad (h_star k_In m)).
 
+Check hash_words.
+
   (* The "two-key" version of GHMAC and HMAC. *)
   (* Concatenate (K xor opad) and (K xor ipad) *)
   Definition GHMAC_2K (k : Bvector (b + b)) m :=
     let (k_Out, k_In) := splitVector b b k in (* concat earlier, then split *)
       let h_in := (hash_words (k_In :: m)) in 
         hash_words (k_Out :: (app_fpad h_in) :: nil).
+
+SearchAbout Bvector.
   
   Definition HMAC_2K (k : Bvector (b + b)) (m : Blist) :=
     GHMAC_2K k (splitAndPad m).
@@ -467,24 +470,28 @@ Proof.
 
 
 (* TODO: 10/25/14
-- figure out old and new fpad **
-- add lemma for xor **
+- pull and merge
+- look at ASCII library
+   - rewrite iterate to emulate their conversion
+- add lemma for xor ** 
+   - lennart: B2b (Byte.xor B1 B2) = Vector.map2 xorb (B2b B1) (B2b B2)
 - fill in parameters: sha_h, sha_iv, sha_splitandpad_vector, fpad **
 - figure out how to get split lemmas to work
 - check bytes_bits_vector' fixpoint
-   - get it to eval
+   - look at new definitions, inductive?
    - see if induction works with it
-   - write bytes_bits_conv_vector X
 - step through theorem
-  - figure out how to use relations in theorem: compositional?
+  - figure out how to use relations in theorem: compositional? f property? **
 
+- some other paper with a good approach?
+- generalize technique for crypto
  *)
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
                             (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
                             (op ip : byte) (OP IP : Bvector (plus c p)),
   ((length k) * 8)%nat = b c p ->
-  bytes_bits_vector_wrong k K ->
+  bytes_bits_vector_comp k K = true ->
   bytes_bits_lists m M ->
   bytes_bits_conv_vector' op OP = true ->
   bytes_bits_conv_vector' ip IP = true ->
@@ -511,7 +518,7 @@ Proof.
     unfold HMAC_SHA256.mkArgZ in *. unfold HMAC_SHA256.mkArg in *.
 
   unfold BVxor in *. unfold xorb in *. (* unfold Vector.map2 in *. *)
-  unfold Byte.xor in *. (* unfold Z.lxor in *. *)
+  unfold Byte.xor in *. unfold Z.lxor in *. 
 
     (* Lemma:
 
@@ -523,7 +530,9 @@ BVxor (b 256 256) K OP = Vector.map2 xorb K OP (can unfold xorb)
                              (HMAC_SHA256.sixtyfour ip)))
 
 probably want a meta-lemma for composition of relations
-r1 x X -> r2 y Y -> f x y ~ F X Y
+r1 x X -> r2 y Y -> ?f ? -> f x y ~ F X Y
+
+try with smaller examples first
 
 figure out how to approach proof: avoid 4-way induction
  *)
