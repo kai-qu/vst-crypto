@@ -378,7 +378,12 @@ b = block size
 c = output size
 p = padding = b - c
 
-why pad the key? why not just let it be size b?
+
+for h: convert iv and chunk from bits to bytes, run SHA h, convert result from bytes to bits
+for iv: SHA uses a list of 64 ints (block size), but here, we want 512 bits.
+   normal bytes to bits conversion should work
+for splitAndPad: convert msg from bits to bytes, run SHA generate_and_pad',
+   convert to bits, split into list of block-size chunks (with proof that this is possible)
  *)
 
 (* ------------------------------------- *)
@@ -441,6 +446,7 @@ Should it be more abstract? *)
 - add lemma for xor **
    - lennart: B2b (Byte.xor B1 B2) = Vector.map2 xorb (B2b B1) (B2b B2)
 - fill in parameters: sha_h, sha_iv, sha_splitandpad_vector, (fpad) **
+   - write bits to bytes function
 - step through theorem
   - figure out how to use relations in theorem: compositional? f property? **
 
