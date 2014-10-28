@@ -16,22 +16,17 @@ Fixpoint splitVector (A : Set) (n m : nat) :
   Vector.t A (n + m) -> (Vector.t A n * Vector.t A m) :=
   match n with
     | 0%nat =>
-      fun (v : Vector.t A (O + m)) => (@Vector.nil A, v) (* why the function? TODO *)
+      fun (v : Vector.t A (O + m)) => (@Vector.nil A, v) (* TODO *)
     | S n' =>
       fun (v : Vector.t A (S n' + m)) =>
         let (v1, v2) := splitVector _ _ (Vector.tl v) in
           (Vector.cons _ (Vector.hd v) _ v1, v2)
   end.
 
-Eval compute in splitVector 1 2 [true; true; true].
+Definition concatToList (n m : nat) (v1 : Bvector n) (v2 : Bvector m) : Blist :=
+  Vector.to_list v1 ++ Vector.to_list v2.
 
 Section HMAC.
-
-SearchAbout Bvector.
-Print Bvector.
-Check Bvector 10.
-Check [true].
-Print Vector.
 
 (* b = block size
    c = digest (output) size
@@ -49,14 +44,34 @@ Print Vector.
   (* The composition of the keyed hash function with the IV gives a hash function on lists of words. *)
   Definition hash_words := h_star iv.
 
-  (* TODO check how this corresponds to SHA
-     Seems that h = SHA compression function
-     hash_words with SHA's iv is SHA
-   *)
   Check hash_words.
   Check h_star.
 
   Variable splitAndPad : Blist -> list (Bvector b).
+
+  Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
+  Notation "f @ g" := (compose f g) (at level 80, right associativity).
+
+  Definition hash_words_padded : Blist -> Bvector c :=
+    hash_words @ splitAndPad.
+
+(* New design:
+
+hash_words : list (Bvector b) -> Bvector c
+
+split_and_pad : Blist -> list (Bvector b)
+
+hash_words_padded : Blist -> Bvector c
+   hash_words_padded := hash_words . split_and_pad
+
+concatToList : Bvector n -> Bvector m -> Blist
+
+(p, fpad, app_fpad removed; c <= b)
+
+In line 3 of GHMAC_2K:
+hash_words_padded (concatToList k_out h_in 
+
+GNMAC? *)
 
   Hypothesis splitAndPad_1_1 :
     forall b1 b2,
@@ -71,9 +86,14 @@ Print Vector.
   Definition h_star_pad k x :=
     app_fpad (h_star k x).
 
+  (* TODO fix this *)
   Definition GNMAC k m :=
     let (k_Out, k_In) := splitVector c c k in
-    h k_Out (app_fpad (h_star k_In m)).
+    h k_Out (h_star_pad k_In m). (* could take head of list *)
+
+  Check GNMAC. 
+  (* Vector.t bool (c + c) -> list (Bvector b) -> Bvector c *)
+  Check h.
 
 Check hash_words.
 
@@ -82,7 +102,7 @@ Check hash_words.
   Definition GHMAC_2K (k : Bvector (b + b)) m :=
     let (k_Out, k_In) := splitVector b b k in (* concat earlier, then split *)
       let h_in := (hash_words (k_In :: m)) in
-        hash_words (k_Out :: (app_fpad h_in) :: nil).
+        hash_words_padded (concatToList k_Out h_in).
 
 SearchAbout Bvector.
 
@@ -120,27 +140,6 @@ each Z is one byte (8 bits) *)
 (* TODO: add isbyteZ (from SHA256.v), 0 <= i <= 256 *)
 
 (* *************** byte/bit computational *)
-
-(* TODO: finish this
-
-The term "Vector.append (iterate n' num_new) [bool_digit]" has type
- "Vector.t bool (n' + 1)" while it is expected to have type
-"Bvector (S n')".
-
-Function with proof of equivalence? see hash_blocks  *)
-
-(*
-Fixpoint iterate (n : nat) (byte : nat) : Bvector n :=
-  match n as x return Bvector x with
-    | O => Vector.nil bool
-    | S n' =>
-      let byte_subtract := (byte - NPeano.pow 2 n')%nat in
-      let bool_digit := negb (leb byte_subtract 0) in
-      let num_new := if bool_digit then byte_subtract else byte in
-      Vector.append (iterate n' num_new) [bool_digit] (* could reverse instead *)
-  end.
-
-*)
 
 Lemma add_1_r_S : forall (n : nat), (n + 1)%nat = S n.
 Proof.
@@ -186,15 +185,8 @@ Eval compute in byte_to_bits 200.
 Eval compute in byte_to_bits 255.
 Eval compute in byte_to_bits 256. (* not valid *)
 
-(* Parameter byte_to_bits : Z -> Bvector 8. *)
-
 (* Or: concatMap byte_to_bit bytes *)
-Check Bvector.
-SearchAbout Bvector.
-Print Vector.t.
 
-(* how to prove that it's length bytes * 8? *)
-(* list of bytes? (type) *)
 Fixpoint bytes_to_bits (bytes : list Z) : Bvector (length bytes * 8) :=
   match bytes as x return Bvector (length x * 8) with (* CPDT *)
     | nil => Vector.nil bool
@@ -202,10 +194,7 @@ Fixpoint bytes_to_bits (bytes : list Z) : Bvector (length bytes * 8) :=
   end.
 
 
-
 (* ************* inductive defs *)
-
-SearchAbout Bvector.
 
 Definition asZ (x : bool) : Z := if x then 1 else 0.
 
@@ -232,20 +221,7 @@ Inductive bytes_bits_lists : list Z -> Blist -> Prop :=
                 bytes_bits_lists (byte :: bytes)
                                 (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits).
 
-(*
-Inductive bytes_bits_vector' (l : list Z) : Bvector (8 * length l) -> Prop :=
-  | eq_empty_v : forall (bits : Bvector (8 * length nil)),
-                   bytes_bits_vector' nil bits
-  (* TODO: might want to use Vector.nil bool? *)
-  | eq_cons_v : forall (bytes : list Z) (bits : Bvector (8 * length bytes))
-                       (byte : Z) (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
-                  bytes_bits_vector' bytes bits ->
-                  convertByteBits byte [b0; b1; b2; b3; b4; b5; b6; b7] ->
-                  bytes_bits_vector' (byte :: bytes)
-                                     (* TODO: is this the right endianness? *)
-                                     (Vector.append [b0; b1; b2; b3; b4; b5; b6; b7] bits)
-.
-*)
+(* *** *)
 
 Lemma list_cons_len {A : Type} :
       forall (x : A) (xs : list A), length (x :: xs) = (1 + length xs)%nat.
@@ -325,11 +301,12 @@ fix bveqF (n : nat) (b1 b2 : Bvector n) {struct n} : bool :=
   end b1 b2.
 
 Fixpoint bveq (n:nat) (b1 b2:Bvector n): bool.
-  destruct n; intros. apply true. remember (S n) as m.
+destruct n; intros. apply true. remember (S n) as m.
 destruct b1. inversion Heqm. inversion Heqm. subst.  inversion b2. subst.
-  apply (eqb h h0 && bveq _ b1 H0).
+apply (eqb h h0 && bveq _ b1 H0).
 (*  apply (eqb (Vector.hd b1) (Vector.hd b2) && (bveq _ (Vector.tl b1) (Vector.tl b2))).*)
 Defined.
+
 Print bveq.
 
 Definition bveq1 (n:nat) (b1 b2:Bvector n): bool.
@@ -346,24 +323,9 @@ nat_rec (fun n0 : nat => Bvector n0 -> Bvector n0 -> bool)
    eqb (Vector.hd b3) (Vector.hd b4) && IHn (Vector.tl b3) (Vector.tl b4)) n
   b1 b2.
 
-
 Eval compute in (bveqD [true; true; false] [true; true; false]).
 
 (* TODO watch out for endianness *)
-Search Bvector.
-
-(* TODO replace bytes_bits_vector_comp with bytes_bits_vector *)
-
-Inductive bytes_bits_vector : forall n
-         (bytes : list Z) (bits : Bvector n), Prop :=
-| bvv_nil: bytes_bits_vector nil []
-| bvv_cons: forall n bytes1 bits1
-                   (bt : Z) (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
-              @bytes_bits_vector n bytes1 bits1 ->
-              convertByteBits bt [b0; b1; b2; b3; b4; b5; b6; b7] ->
-              @bytes_bits_vector (8 + n) (bt :: bytes1)
-                                     (* TODO: is this the right endianness? *)
-                                     (Vector.append [b0; b1; b2; b3; b4; b5; b6; b7] bits1).
 
 Definition bytes_bits_vector_comp'
          (bytes : list Z) (bits : Bvector (8 * length bytes)) : bool.
@@ -378,16 +340,29 @@ Proof.
   apply (bvector_eq bvector bits).
 Defined.
 
+(* *** *)
+
+Inductive bytes_bits_vector : forall n
+         (bytes : list Z) (bits : Bvector n), Prop :=
+| bvv_nil: bytes_bits_vector nil []
+| bvv_cons: forall n bytes1 bits1
+                   (bt : Z) (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
+              @bytes_bits_vector n bytes1 bits1 ->
+              convertByteBits bt [b0; b1; b2; b3; b4; b5; b6; b7] ->
+              @bytes_bits_vector (8 + n) (bt :: bytes1)
+                                     (* TODO: is this the right endianness? *)
+                                     (Vector.append [b0; b1; b2; b3; b4; b5; b6; b7] bits1).
+
+
 (* ----------------------------------------- Theorem and parameters *)
 
-Check HMAC_SHA256.HMAC.         (* ? *)
+Check HMAC_SHA256.HMAC.
 Check HMAC.
 (* HMAC
      : forall c p : nat,
        (Bvector c -> Bvector (b c p) -> Bvector c) ->   // compression function h
        Bvector c ->                          // iv, h's initialization vector
        (Blist -> list (Bvector (b c p))) ->  // splitAndPad (e.g. generate_and_pad)
-       Bvector p ->                          // fpad, constant-length padding
        Bvector (b c p) ->                    // opad
        Bvector (b c p) ->                    // ipad
 
@@ -406,32 +381,11 @@ p = padding = b - c
 why pad the key? why not just let it be size b?
  *)
 
-
-(* want Bvector b = 512 bits *)
-Print Byte.int.
-Print Byte.repr.
-Check Byte.unsigned.
-Check HMAC_SHA256.sixtyfour.
-
-Definition opad_test :=
-     bytes_to_bits
-                     (map Byte.unsigned (HMAC_SHA256.sixtyfour (Byte.repr 52))).
-Check opad_test.
-(* Definition ipad_test := bytes_to_bits
-                     (map Byte.unsigned (HMAC_SHA256.sixtyfour HMAC_SHA256.Ipad)). *)
-
-Check HMAC.
-
 (* ------------------------------------- *)
 Module Equiv.
 
 Definition c:nat := (SHA256_.DigestLength * 8)%nat.
-(*Variable p:nat.
-Locate HMAC.
-Check @HMAC. Check @sha_h.
-Check (@HMAC _ p (@sha_h _ p plus) sha_iv (sha_splitandpad_vector p) (fpad p)).
-Check (HMAC (sha_h p plus) sha_iv).
-*)
+
 Definition p:=(32 * 8)%nat.
 
 Parameter sha_iv : Bvector (SHA256_.DigestLength * 8).
@@ -439,19 +393,10 @@ Parameter sha_iv : Bvector (SHA256_.DigestLength * 8).
 (* Definition sha_h : list Z -> list Z := SHA256_.Hash. *)
 Parameter sha_h : Bvector c -> Bvector (c + p) -> Bvector c.
 
-(* corresponds to block size. b = plus *)
-
-(*  "Blist -> list (Bvector (b SHA256_.DigestLength c))" *)
 Parameter sha_splitandpad_vector :
   Blist -> list (Bvector (SHA256_.DigestLength * 8 + p)).
 
-Parameter fpad : Bvector p.
-
-(* Is this the theorem we want? Is it useful for the rest of the proofs?
-Should it be more abstract? *)
-
-(* TODO: opad <> ipad? *)
-Locate sixtyfour.
+(* Parameter fpad : Bvector p. *)
 
 Definition bytes_bits_conv_vector'
            (byte_pad : byte) (bits_pad : Bvector (c + p)) : Prop :=
@@ -459,6 +404,7 @@ Definition bytes_bits_conv_vector'
   bytes_bits_vector bytes_pad bits_pad.
 
 (* -------------- *)
+(* Theorem lemmas *)
 
 (*  (let (k_Out, k_In) :=
                        splitVector (b 256 256) (b 256 256)
@@ -468,7 +414,6 @@ Possibly try n = m -> splitVector n m...
 *)
 
 SearchAbout Bvector.
-(* SearchAbout Vector. *)
 
 Lemma empty_vector : forall (v : Bvector 0),
                        v = [].
@@ -488,6 +433,8 @@ Proof.
 
     Admitted.
 
+(* Is this the theorem we want? Is it useful for the rest of the proofs?
+Should it be more abstract? *)
 
 (* TODO: 10/25/14
 
@@ -514,6 +461,7 @@ Proof.
 bytes_bits_vector (inductive, returns prop)
 bytes_bits_vector_comp (returns bool)
 bytes_bits_vector_comp' (returns bool) *)
+
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
                             (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
@@ -523,7 +471,7 @@ Theorem HMAC_spec_equiv : forall
   bytes_bits_lists m M ->
   bytes_bits_conv_vector' op OP ->
   bytes_bits_conv_vector' ip IP ->
-  HMAC sha_h sha_iv sha_splitandpad_vector fpad OP IP K M = H ->
+  HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
   HMAC_SHA256.HMAC op ip m k = h -> (* m k, not k m *)
   bytes_bits_vector h H.
 Proof.
@@ -537,7 +485,8 @@ Proof.
   unfold HMAC_SHA256.HMAC in *.
 
   unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
-  (* Still abstract: sha_h, sha_splitandpad_vector, fpad *)
+  (* Still abstract: sha_h, sha_splitandpad_vector *)
+  Check sha_h. 
   rewrite -> split_append_id in HMAC_abstract.
 
   unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
@@ -547,7 +496,7 @@ Proof.
     unfold SHA256_.Hash in *. unfold functional_prog.SHA_256' in *.
     Print SHA256_.Hash.
     Print functional_prog.SHA_256'.
-Print functional_prog.generate_and_pad'.    
+    Print functional_prog.generate_and_pad'.    
     simpl in *.
     Check hash_words. Print hash_words. Print h_star. Print fold_left.
     (*  : forall c p : nat,
@@ -558,7 +507,7 @@ Print functional_prog.generate_and_pad'.
   unfold BVxor in *. unfold xorb in *. (* unfold Vector.map2 in *. *) 
   unfold Byte.xor in *. unfold Z.lxor in *.
 
-    (* Lemma:
+  (* Lemma:
 
 BVxor (b 256 256) K OP = Vector.map2 xorb K OP (can unfold xorb)
      ~
@@ -583,4 +532,4 @@ figure out how to approach proof: avoid 4-way induction
   induction msgs_eq.
 
 
-Abort.536
+Abort.
