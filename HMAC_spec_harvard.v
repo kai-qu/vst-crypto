@@ -538,6 +538,7 @@ Proof.
 
   unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
   (* Still abstract: sha_h, sha_splitandpad_vector, fpad *)
+  Check sha_h. 
   rewrite -> split_append_id in HMAC_abstract.
 
   unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.

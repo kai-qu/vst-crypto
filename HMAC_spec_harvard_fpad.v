@@ -7,6 +7,8 @@ Require Import Arith.
 Require Import HMAC_functional_prog.
 Require Import Integers.
 Require Import Coqlib.
+Require Import sha_padding_lemmas.
+Require Import functional_prog.
 
 (* Require Import List. Import ListNotations. *)
 
@@ -353,6 +355,21 @@ Inductive bytes_bits_vector : forall n
                                      (* TODO: is this the right endianness? *)
                                      (Vector.append [b0; b1; b2; b3; b4; b5; b6; b7] bits1).
 
+(* ---------------------------------------------------------------- *)
+(* Some more computational bytes/bits conversion definitions *)
+(* TODO: plural or singular? e.g. bit to byte *)
+
+(* Bytes to bits *)
+
+
+(* Bits to bytes *)
+
+
+(* Bytes to bits to bytes *)
+
+
+(* Bits to bytes to bits *)
+
 
 (* ----------------------------------------- Theorem and parameters *)
 
@@ -443,12 +460,20 @@ Should it be more abstract? *)
 
 (* TODO: 10/25/14
 
-- add lemma for xor **
-   - lennart: B2b (Byte.xor B1 B2) = Vector.map2 xorb (B2b B1) (B2b B2)
 - fill in parameters: sha_h, sha_iv, sha_splitandpad_vector, (fpad) **
    - write bits to bytes function
+   - rewrite bytes to bits
+   - replace inductive defs with computational?
+   - functional_prog.generate_and_pad' has type list Z -> Z -> list int... rewrite it?
+   - g_a_p has type list Z -> list int
+   - Zlist_to_intlist?
+   - using new fpad version: prove equivalence
+   - prove SHA256.hash_blocks equivalence with fold
+   - need inner lemmas, gradually build up to full theorem + composition lemmas
 - step through theorem
   - figure out how to use relations in theorem: compositional? f property? **
+- add lemma for xor **
+   - lennart: B2b (Byte.xor B1 B2) = Vector.map2 xorb (B2b B1) (B2b B2)
 
 - clean up file
 - look at ASCII library
@@ -456,9 +481,10 @@ Should it be more abstract? *)
 - check bytes_bits_vector' fixpoint
    - look at new definitions, inductive?
    - see if induction works with it
-
 - figure out how to get split lemmas to work
+
 - skim Bellare proof and Adam's proof
+- read Adam's papers on FCF, etc.
 - some other paper with a good approach?
 - generalize technique for crypto
  *)
@@ -468,7 +494,89 @@ bytes_bits_vector (inductive, returns prop)
 bytes_bits_vector_comp (returns bool)
 bytes_bits_vector_comp' (returns bool) *)
 
+  (*  (hash_words 256 sha_h sha_iv
+                          (BVxor 512 K IP :: sha_splitandpad_vector M))
+
+HMAC_SHA256.INNER op
+                       (map Byte.repr (HMAC_SHA256.mkKey k)) m
+
+Bvector c vs. list Z
+ *)
+
+Theorem HMAC_inner_equiv : forall
+                             (k m : list Z)
+                             (K : Bvector (plus c p)) (M : Blist)
+                             (bits_inner : Bvector c) (bytes_inner : list Z)
+                             (ip : byte) (IP : Bvector (plus c p)),
+ ((length k) * 8)%nat = (c + p)%nat ->
+  bytes_bits_vector k K ->
+  bytes_bits_lists m M ->
+  bytes_bits_conv_vector' ip IP ->
+
+  hash_words 256 sha_h sha_iv
+             (BVxor 512 K IP :: sha_splitandpad_vector M) = bits_inner ->
+
+  HMAC_SHA256.INNER ip
+                    (map Byte.repr (HMAC_SHA256.mkKey k)) m = bytes_inner ->
+
+  bytes_bits_vector bytes_inner bits_inner.
+Proof.
+  intros k m K M bits_inner bytes_inner ip IP.
+  intros padded_key_len padded_keys_eq msgs_eq ips_eq.
+  intros HMAC_abs HMAC_con.
+  
+
+
+Admitted.  
+
 Theorem HMAC_spec_equiv : forall
+                            (k m h : list Z)
+                            (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
+                            (op ip : byte) (OP IP : Bvector (plus c p))
+                          (bits_inner : Bvector c) (bytes_inner : list Z),
+  ((length k) * 8)%nat = (c + p)%nat ->
+  bytes_bits_vector k K ->
+  bytes_bits_lists m M ->
+  bytes_bits_conv_vector' op OP ->
+  bytes_bits_conv_vector' ip IP ->
+  HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
+  HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
+  bytes_bits_vector h H.
+Proof.
+  intros k m h K M H op ip OP IP bits_inner bytes_inner.
+  intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
+  intros HMAC_abstract HMAC_concrete.
+  unfold p, c in *.
+  simpl in *.
+
+  unfold HMAC in *. simpl in *.
+  unfold HMAC_SHA256.HMAC in *.
+
+  unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
+  (* Still abstract: sha_h, sha_splitandpad_vector *)
+  Check sha_h. 
+  rewrite -> split_append_id in HMAC_abstract.
+
+Check (hash_words 256 sha_h sha_iv
+                          (BVxor 512 K IP :: sha_splitandpad_vector M)).
+
+Check HMAC_SHA256.INNER ip
+                       (map Byte.repr (HMAC_SHA256.mkKey k)) m.
+
+  unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
+
+  pose proof HMAC_inner_equiv as inner_equiv.
+  
+  specialize inner_equiv with k m K M bits_inner bytes_inner ip IP.
+ 
+  rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
+
+  
+
+
+Abort.
+
+Theorem HMAC_spec_equiv' : forall
                             (k m h : list Z)
                             (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
                             (op ip : byte) (OP IP : Bvector (plus c p)),
@@ -478,7 +586,7 @@ Theorem HMAC_spec_equiv : forall
   bytes_bits_conv_vector' op OP ->
   bytes_bits_conv_vector' ip IP ->
   HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
-  HMAC_SHA256.HMAC op ip m k = h -> (* m k, not k m *)
+  HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
   bytes_bits_vector h H.
 Proof.
   intros k m h K M H op ip OP IP.
@@ -495,21 +603,38 @@ Proof.
   Check sha_h. 
   rewrite -> split_append_id in HMAC_abstract.
 
+Check (hash_words 256 sha_h sha_iv
+                          (BVxor 512 K IP :: sha_splitandpad_vector M)).
+
+Check HMAC_SHA256.INNER ip
+                       (map Byte.repr (HMAC_SHA256.mkKey k)) m.
+
   unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
+
+    unfold SHA256_.Hash in *.
+    rewrite -> functional_prog.SHA_256'_eq in *.
+    unfold SHA256.SHA_256 in *.
+    repeat rewrite <- sha_padding_lemmas.pad_compose_equal in *.
+    unfold sha_padding_lemmas.generate_and_pad' in *.
+
+    unfold hash_words_padded in *.
+    unfold hash_words in *.
+    unfold compose in *.
+    (* hash_words_padded 256 sha_h sha_iv sha_splitandpad_vector
+        ~ SHA256.hash_blocks SHA256.init_registers *)
+    Check h_star 256 sha_h sha_iv. Check SHA256.hash_blocks SHA256.init_registers.
+    Check hash_words_padded 256 sha_h sha_iv sha_splitandpad_vector.
+    Print SHA256.registers.
+    (* Blist -> Bvector c vs.
+       list int -> SHA256.registers = list int *)
+    (* unfold h_star in *. *)
+    (* pad : list Z -> list Z *)
+
+    (* unfold SHA256.hash_blocks in *. *)
+
     unfold HMAC_SHA256.outerArg in *. unfold HMAC_SHA256.innerArg in *.
     unfold HMAC_SHA256.mkArgZ in *. unfold HMAC_SHA256.mkArg in *.
-
-    unfold SHA256_.Hash in *. unfold functional_prog.SHA_256' in *.
-    Print SHA256_.Hash.
-    Print functional_prog.SHA_256'.
-    Print functional_prog.generate_and_pad'.    
-    simpl in *.
-    Check hash_words. Print hash_words. Print h_star. Print fold_left.
-    (*  : forall c p : nat,
-       (Bvector c -> Bvector (b c p) -> Bvector c) ->
-       Bvector c -> list (Bvector (b c p)) -> Bvector c  *)
-    Check sha_h.    (*  : Bvector c -> Bvector (c + p) -> Bvector c *)
-
+    
   unfold BVxor in *. unfold xorb in *. (* unfold Vector.map2 in *. *) 
   unfold Byte.xor in *. unfold Z.lxor in *.
 
