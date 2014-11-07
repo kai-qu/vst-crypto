@@ -545,12 +545,15 @@ Lemma comp : forall {A B C : Type} (f : B -> C) (g : A -> B) (x : A),
                (f @ g) x = f (g x).
 Proof. intros.  reflexivity. Qed.
 
+
+
+(*
 Theorem equiv : forall {t T : Type}
                   (tT : t -> T) (Tt : T -> t)
                   (f : t -> t) (F : T -> T)
                   (x : t) (X : T),
-                  x = Tt X
-                  -> F = (tT @ f @ Tt)
+                  x = Tt X      (* x ~ X *)
+                  -> F = (tT @ f @ Tt) (* f = Tt @ F @ tT *)
                   -> f (Tt X) = Tt (tT (f (Tt X)))
                   -> f x = Tt (F X).
 Proof.
@@ -562,47 +565,111 @@ Proof.
   repeat rewrite -> comp.
   apply roundtrip.              (* specific to input-roundtrip-preserving property of f *)
 Qed.  
+*)
+
+(* TODO look in Algebra lib *)
+(* x ~ y -> f x ~ f y  , x y : a  *)
+
+Theorem equiv' : forall {t T : Type} (* t = bits, T = bytes --
+                                        list Z or list byte, Bvector Blist *)
+                  (tT : t -> T) (Tt : T -> t)
+                  (f : t -> t) (F : T -> T)
+                  (x : t) (X : T),
+                  x = Tt X      (* x ~ X *)
+                  -> f = (Tt @ F @ tT)
+                  -> (tT @ Tt) = id
+                  -> f x = Tt (F X). (* f x ~ F X -- byte_bits_vector *)
+
+(* TODO: start a section parametrized by ~, axioms about ~ *)
+Proof.
+  intros t T tT Tt f F x X.
+  intros relation composition roundtrip.
+  (* x ~ y := x = Tt y *)
+  rewrite composition.
+  rewrite relation.
+  repeat rewrite -> comp.
+  change (tT (Tt X)) with ((tT @ Tt) X).
+  rewrite roundtrip.
+  unfold id.
+  reflexivity.
+Qed.
+  (* apply roundtrip.              (* specific to input-roundtrip-preserving property of f *) *)
+
+Require Import JMeq.
+
+Theorem equiv_JM : forall {t T : Type} (* t = bits, T = bytes --
+                                        list Z or list byte, Bvector Blist *)
+                  (tT : t -> T) (Tt : T -> t)
+                  (f : t -> t) (F : T -> T)
+                  (x : t) (X : T),
+                  JMeq x X      (* x ~ X *)
+                  -> JMeq f (Tt @ F @ tT)
+                  -> (tT @ Tt) = id
+                  -> JMeq (f x) (F X). (* f x ~ F X -- byte_bits_vector *)
+
+(* TODO: start a section parametrized by ~, axioms about ~ *)
+Proof.
+  intros t T tT Tt f F x X.
+  intros relation composition roundtrip.
+  (* x ~ y := x = Tt y *)
+  rewrite composition.
+  apply eq_dep_id_JMeq.
+
+  SearchAbout EqdepFacts.eq_dep.
+  SearchAbout JMeq.
+Abort.
+(*
+  rewrite relation.
+    repeat rewrite -> comp.
+  change (tT (Tt X)) with ((tT @ Tt) X).
+  rewrite roundtrip.
+  unfold id.
+  reflexivity.
+Qed.
+*)
 
 Theorem equiv_comp : forall {t T : Type}
                   (tT : t -> T) (Tt : T -> t)
                   (f : t -> t) (F : T -> T) (g : t -> t) (G : T -> T)
                   (x : t) (X : T),
                   x = Tt X
-                  -> F = (tT @ f @ Tt)
-                  -> f (Tt X) = Tt (tT (f (Tt X)))
+                  -> f = (Tt @ F @ tT)
                   -> f x = Tt (F X) (* inner composition *)
 
-                  -> G = (tT @ g @ Tt) (* not sure if true *)
-                  -> g (Tt (F X)) = Tt (tT (g (Tt (F X)))) (* roundtrip property on Tt F X*)
-
+                  -> g = (Tt @ G @ tT) (* not sure if true *)
+                  -> (tT @ Tt) = id
                   -> g (f x) = Tt (G (F X)).
 Proof.
   intros t T tT Tt f F g G x X.
-  intros relation composition_f roundtrip_f inner composition_g roundtrip_g.
-  apply equiv with tT.
+  intros relation composition_f inner composition_g roundtrip.
+  apply equiv' with tT.
   (* Assump 1 *)
     apply inner.
   (* Assump 2 *)
     apply composition_g.
   (* Assump 3  *)
-    apply roundtrip_g.
+    apply roundtrip.
 Qed.    
 
 (* needs to be computational due to function composition? *)
 Theorem equiv_prop : forall {t T : Type}
                   (tT : t -> T) (Tt : T -> t)
-                  (Tt_prop : T -> t -> Prop)
+                  (* (Tt_prop : T -> t -> Prop) *)
                   (tT_prop : t -> T -> Prop)
                   (f : t -> t) (F : T -> T)
                   (x : t) (X : T),
                   tT_prop x X
-                  -> F = (tT @ f @ Tt)
-                  -> tT_prop (f (Tt X)) (tT (f (Tt X)))
+                  -> f = (Tt @ F @ tT)
+                  (* -> tT_prop (f (Tt X)) (tT (f (Tt X))) *)
                   -> tT_prop (f x) (F X).
 Proof.
-  intros t T tT Tt Tt_prop tT_prop f F x X.
-  intros relation composition roundtrip.
-  rewrite composition. repeat rewrite -> comp.
+  intros t T tT Tt tT_prop f F x X.
+  intros relation composition.
+  rewrite composition.
+  (* rewrite relation. *)
+  (* x = Tt X  <- bytes_to_bits *)
+
+  repeat rewrite -> comp.
   
 Admitted.
 
@@ -631,7 +698,7 @@ Proof.
   (* Case ind *)
     (* Vector.append is a problem *)
     rewrite -> composition.
-    Print bytes_bits_vector.
+    Print bytes_bits_vector. 
     
 Admitted.
   
@@ -659,31 +726,67 @@ Admitted.
   
 (* ------------------ *)
 
+Require Import JMeq.
+
 (* Parameter bbv (bytes : list Z) -> Bvector (length bytes). *)
 Parameter bbl : (list Z -> Blist).
 Parameter bbv_byte : forall n, (byte -> Bvector n).
+Check JMeq.
+Print JMeq.
+
+
+(* TODO *)
+Definition conv : forall (m n : nat) (e : Bvector n) (E : m = n), Bvector m.
+Proof.
+  intros m n h1 h2.
+  rewrite -> h2.
+  apply h1.
+Defined.  
+
+Lemma sn_eq : forall (n : nat), (n + 1)%nat = S n. Proof. Admitted.
+
+Lemma test' : forall (n : nat) (b1 : Bvector (S n)) (b2 : Bvector (n + 1)),
+               conv b1 (sn_eq n) = b2.
+Proof.
+Abort.  
+
+Lemma test : forall (n : nat) (b1 : Bvector (S n)) (b2 : Bvector (n + 1)),
+               b1 = b2.
+Proof.
+  
 
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
-                            (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
+                            (K : Bvector (c + p)) (M : Blist) (H : Bvector c)
                             (op ip : byte) (OP IP : Bvector (plus c p))
                           (bits_inner : Bvector c) (bytes_inner : list Z),
   ((length k) * 8)%nat = (c + p)%nat ->
-  (* bytes_to_bits k = K ->                  (* vector *) *) (* TODO dependent types *)
+  (* bytes_to_bits k = K -> *)
+  JMeq (bytes_to_bits k) K ->                  (* vector *)
+  (* TODO: dependent equality / John Major
+     to substitute K for k, need theorems about JM equality?
+     finish specifying theorem, intro and elim JMeq
+     qinxiang@princeton.edu
+   *)
   (* bbl m = M ->                  (* list *) *)
   (* bbv_byte op = OP -> *)
   (* bbv_byte ip = IP -> *)
-  True -> True -> True -> True ->
-  HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
+  True -> True -> True -> 
+  HMAC p sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
   HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
   (* bytes_to_bits h = H. *)
-  bytes_bits_vector h H.
+  JMeq (bytes_to_bits h) H.
   (* inductive works because it defers the type-level computation,
      but function composition is computational... *)
 Proof.
   intros k m h K M H op ip OP IP bits_inner bytes_inner.
   intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
   intros HMAC_abstract HMAC_concrete.
+  (* apply equiv. *) (* TODO *)
+
+SearchAbout JMeq.
+
+
   unfold p, c in *.
   simpl in *.
 
@@ -705,8 +808,8 @@ Check HMAC_SHA256.INNER ip
   pose proof HMAC_inner_equiv as inner_equiv.
   specialize inner_equiv with k m K M bits_inner bytes_inner ip IP.
   rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
-
-  apply equiv.
+Abort.
+  (* apply equiv. *)
   
 
 (* 
@@ -741,7 +844,7 @@ bits = Bvector m
 -> 
  *)
 
-Abort.
+
 
 
 Theorem HMAC_spec_equiv' : forall
@@ -751,11 +854,11 @@ Theorem HMAC_spec_equiv' : forall
   ((length k) * 8)%nat = (c + p)%nat ->
   bytes_bits_vector k K ->
   bytes_bits_lists m M ->
-  bytes_bits_conv_vector' op OP ->
-  bytes_bits_conv_vector' ip IP ->
+  bytes_bits_conv_vector op OP ->
+  bytes_bits_conv_vector ip IP ->
   HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
   HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
-  bytes_bits_vector h H.
+  bytes_bits_vector h H.            (* TODO reverse capital/lowercase *)
 Proof.
   intros k m h K M H op ip OP IP.
   intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
@@ -773,7 +876,7 @@ Proof.
 
 Check (hash_words 256 sha_h sha_iv
                           (BVxor 512 K IP :: sha_splitandpad_vector M)).
-`1
+
 Check HMAC_SHA256.INNER ip
                        (map Byte.repr (HMAC_SHA256.mkKey k)) m.
 
