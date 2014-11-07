@@ -28,6 +28,9 @@ Fixpoint splitVector (A : Set) (n m : nat) :
 Definition concatToList (n m : nat) (v1 : Bvector n) (v2 : Bvector m) : Blist :=
   Vector.to_list v1 ++ Vector.to_list v2.
 
+Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
+Notation "f @ g" := (compose f g) (at level 80, right associativity).
+
 Section HMAC.
 
 (* b = block size
@@ -50,9 +53,6 @@ Section HMAC.
   Check h_star.
 
   Variable splitAndPad : Blist -> list (Bvector b).
-
-  Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
-  Notation "f @ g" := (compose f g) (at level 80, right associativity).
 
   Definition hash_words_padded : Blist -> Bvector c :=
     hash_words @ splitAndPad.
@@ -513,6 +513,7 @@ Theorem HMAC_inner_equiv : forall
   bytes_bits_lists m M ->
   bytes_bits_conv_vector' ip IP ->
 
+  (* or-- hash_words_padded? *)
   hash_words 256 sha_h sha_iv
              (BVxor 512 K IP :: sha_splitandpad_vector M) = bits_inner ->
 
@@ -571,10 +572,116 @@ Check HMAC_SHA256.INNER ip
  
   rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
 
-  
+(* 
+  Show: x ~ X -> f x ~ F X
+  or: x ~ X -> y ~ Y -> f x y ~ F X Y
+  or: f : b -> b, F -> B -> B
 
+      SHOW: x:b ~ X:B -> F = bB . f . Bb ->  f x ~ F X
+      f x ~ (bB . f . Bb) X
+      f x ~ bB (f (Bb X))
+      
+      x ~ X means that x = Bb X
+      so I need to show that f x = Bb (bB (f (Bb X))), given that x = Bb X
+
+      or: f x = bytes_to_bits bits_to_bytes f bytes_to_bits X
+          f bytes_to_bits x = bytes_to_bits bits_to_bytes f bytes_to_bits x
+          bytes_to_bits bits_to_bytes = id ON f bytes_to_bits x 
+          this depends on a property of f
+
+question: how is bits_to_bytes defined? TODO
+
+bytes = list Z (of length n)
+  bytes to bits: convert each Z to Bvector 8; concat (maybe reversing for endianness) 
+    into Bvector 8 * n
+bits = Bvector m
+  bits to bytes: 
+   0100010101110 : pad with front zeroes until multiple of 8? (possibly reverse and pad)
+     OR throw away the rest of the bits
+     OR return nothing 
+   e.g. 100 to a byte = 00000100 to a byte = 4 (as Z) 
+
+-> 
+ *)
 
 Abort.
+
+Check (plus @ plus 5).
+Check compose.
+
+Lemma comp : forall {A B C : Type} (f : B -> C) (g : A -> B) (x : A),
+               (f @ g) x = f (g x).
+Proof. intros.  reflexivity. Qed.
+
+Theorem equiv : forall {t T : Type}
+                  (tT : t -> T) (Tt : T -> t)
+                  (f : t -> t) (F : T -> T)
+                  (x : t) (X : T),
+                  x = Tt X
+                  -> F = (tT @ f @ Tt)
+                  -> f (Tt X) = Tt (tT (f (Tt X)))
+                  -> f x = Tt (F X).
+Proof.
+  intros t T tT Tt f F x X.
+  intros relation composition roundtrip.
+  (* x ~ y := x = Tt y *)
+  rewrite composition.
+  rewrite relation.
+  repeat rewrite -> comp.
+  apply roundtrip.              (* specific to input-roundtrip-preserving property of f *)
+Qed.  
+
+Theorem equiv_comp : forall {t T : Type}
+                  (tT : t -> T) (Tt : T -> t)
+                  (f : t -> t) (F : T -> T) (g : t -> t) (G : T -> T)
+                  (x : t) (X : T),
+                  x = Tt X
+                  -> F = (tT @ f @ Tt)
+                  -> f (Tt X) = Tt (tT (f (Tt X)))
+                  -> f x = Tt (F X) (* inner composition *)
+
+                  -> G = (tT @ g @ Tt) (* not sure if true *)
+                  -> g (Tt (F X)) = Tt (tT (g (Tt (F X)))) (* roundtrip property on Tt F X*)
+
+                  -> g (f x) = Tt (G (F X)).
+Proof.
+  intros t T tT Tt f F g G x X.
+  intros relation composition_f roundtrip_f inner composition_g roundtrip_g.
+  apply equiv with tT.
+  (* Assump 1 *)
+    apply inner.
+  (* Assump 2 *)
+    apply composition_g.
+  (* Assump 3  *)
+    apply roundtrip_g.
+Qed.    
+
+(* needs to be computational due to function composition? *)
+(* Theorem equiv_prop : forall {t T : Type} *)
+
+  (* true if
+
+   bytes_to_bits bits_to_bytes x = x iff len x is divisible by 8
+   (x : Bvector n)
+
+   f (x : Bvector n * 8) : Bvector n' * 8 -- when?
+
+   plus, how does the composition work?
+
+       (hash_words_padded 256 sha_h sha_iv sha_splitandpad_vector
+        (concatToList (BVxor 512 K OP)
+           (hash_words 256 sha_h sha_iv
+              (BVxor 512 K IP :: sha_splitandpad_vector M))))
+
+
+ (hash_words_padded 256 sha_h sha_iv sha_splitandpad_vector
+        (concatToList (BVxor 512 K OP) bits_inner)
+ )
+
+
+
+   *)
+  
 
 Theorem HMAC_spec_equiv' : forall
                             (k m h : list Z)
@@ -605,7 +712,7 @@ Proof.
 
 Check (hash_words 256 sha_h sha_iv
                           (BVxor 512 K IP :: sha_splitandpad_vector M)).
-
+`1
 Check HMAC_SHA256.INNER ip
                        (map Byte.repr (HMAC_SHA256.mkKey k)) m.
 
