@@ -420,10 +420,19 @@ Parameter sha_splitandpad_vector :
 
 (* Parameter fpad : Bvector p. *)
 
-Definition bytes_bits_conv_vector'
+Definition bytes_bits_conv_vector
            (byte_pad : byte) (bits_pad : Bvector (c + p)) : Prop :=
   let bytes_pad := map Byte.unsigned (HMAC_SHA256.sixtyfour byte_pad) in
   bytes_bits_vector bytes_pad bits_pad.
+
+(*
+TODO define computational version
+
+Definition bytes_bits_conv_vector'
+           (byte_pad : byte) -> Bvector (c + p)) :=
+  let bytes_pad := map Byte.unsigned (HMAC_SHA256.sixtyfour byte_pad) in
+  bytes_bits_vector bytes_pad bits_pad.
+*)
 
 (* -------------- *)
 (* Theorem lemmas *)
@@ -511,7 +520,7 @@ Theorem HMAC_inner_equiv : forall
  ((length k) * 8)%nat = (c + p)%nat ->
   bytes_bits_vector k K ->
   bytes_bits_lists m M ->
-  bytes_bits_conv_vector' ip IP ->
+  bytes_bits_conv_vector ip IP ->
 
   (* or-- hash_words_padded? *)
   hash_words 256 sha_h sha_iv
@@ -530,84 +539,7 @@ Proof.
 
 Admitted.  
 
-Theorem HMAC_spec_equiv : forall
-                            (k m h : list Z)
-                            (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
-                            (op ip : byte) (OP IP : Bvector (plus c p))
-                          (bits_inner : Bvector c) (bytes_inner : list Z),
-  ((length k) * 8)%nat = (c + p)%nat ->
-  bytes_bits_vector k K ->
-  bytes_bits_lists m M ->
-  bytes_bits_conv_vector' op OP ->
-  bytes_bits_conv_vector' ip IP ->
-  HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
-  HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
-  bytes_bits_vector h H.
-Proof.
-  intros k m h K M H op ip OP IP bits_inner bytes_inner.
-  intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
-  intros HMAC_abstract HMAC_concrete.
-  unfold p, c in *.
-  simpl in *.
-
-  unfold HMAC in *. simpl in *.
-  unfold HMAC_SHA256.HMAC in *.
-
-  unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
-  (* Still abstract: sha_h, sha_splitandpad_vector *)
-  Check sha_h. 
-  rewrite -> split_append_id in HMAC_abstract.
-
-Check (hash_words 256 sha_h sha_iv
-                          (BVxor 512 K IP :: sha_splitandpad_vector M)).
-
-Check HMAC_SHA256.INNER ip
-                       (map Byte.repr (HMAC_SHA256.mkKey k)) m.
-
-  unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
-
-  pose proof HMAC_inner_equiv as inner_equiv.
-  
-  specialize inner_equiv with k m K M bits_inner bytes_inner ip IP.
- 
-  rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
-
-(* 
-  Show: x ~ X -> f x ~ F X
-  or: x ~ X -> y ~ Y -> f x y ~ F X Y
-  or: f : b -> b, F -> B -> B
-
-      SHOW: x:b ~ X:B -> F = bB . f . Bb ->  f x ~ F X
-      f x ~ (bB . f . Bb) X
-      f x ~ bB (f (Bb X))
-      
-      x ~ X means that x = Bb X
-      so I need to show that f x = Bb (bB (f (Bb X))), given that x = Bb X
-
-      or: f x = bytes_to_bits bits_to_bytes f bytes_to_bits X
-          f bytes_to_bits x = bytes_to_bits bits_to_bytes f bytes_to_bits x
-          bytes_to_bits bits_to_bytes = id ON f bytes_to_bits x 
-          this depends on a property of f
-
-question: how is bits_to_bytes defined? TODO
-
-bytes = list Z (of length n)
-  bytes to bits: convert each Z to Bvector 8; concat (maybe reversing for endianness) 
-    into Bvector 8 * n
-bits = Bvector m
-  bits to bytes: 
-   0100010101110 : pad with front zeroes until multiple of 8? (possibly reverse and pad)
-     OR throw away the rest of the bits
-     OR return nothing 
-   e.g. 100 to a byte = 00000100 to a byte = 4 (as Z) 
-
--> 
- *)
-
-Abort.
-
-Check (plus @ plus 5).
-Check compose.
+(* ------------------ *)
 
 Lemma comp : forall {A B C : Type} (f : B -> C) (g : A -> B) (x : A),
                (f @ g) x = f (g x).
@@ -657,7 +589,52 @@ Proof.
 Qed.    
 
 (* needs to be computational due to function composition? *)
-(* Theorem equiv_prop : forall {t T : Type} *)
+Theorem equiv_prop : forall {t T : Type}
+                  (tT : t -> T) (Tt : T -> t)
+                  (Tt_prop : T -> t -> Prop)
+                  (tT_prop : t -> T -> Prop)
+                  (f : t -> t) (F : T -> T)
+                  (x : t) (X : T),
+                  tT_prop x X
+                  -> F = (tT @ f @ Tt)
+                  -> tT_prop (f (Tt X)) (tT (f (Tt X)))
+                  -> tT_prop (f x) (F X).
+Proof.
+  intros t T tT Tt Tt_prop tT_prop f F x X.
+  intros relation composition roundtrip.
+  rewrite composition. repeat rewrite -> comp.
+  
+Admitted.
+
+Parameter bB : forall m, Bvector m -> list Z.
+Check bytes_to_bits.
+Print bytes_bits_vector.
+
+Theorem equiv_prop' : forall (m : nat)
+                  (f : (forall n, Bvector n -> Bvector n)) (F : list Z -> list Z)
+                  (x : Bvector m) (X : list Z),
+                  bytes_bits_vector X x
+                  -> F X = bB (f (length X * 8)%nat (bytes_to_bits X))
+                  -> bytes_bits_vector (bB (f (length X * 8)%nat (bytes_to_bits X)))
+                                       (f (length X * 8)%nat (bytes_to_bits X))
+                  -> bytes_bits_vector (F X) (f m x).
+Proof.
+  intros m f F x X.
+  intros relation composition roundtrip.
+  (* rewrite composition. repeat rewrite -> comp. *)
+  induction relation.
+  (* Case nil *)
+    assert (H1: F nil = nil). admit.
+    assert (H2: f 0%nat [] = []). admit.
+    rewrite -> H1. rewrite -> H2.
+    apply bvv_nil.
+  (* Case ind *)
+    (* Vector.append is a problem *)
+    rewrite -> composition.
+    Print bytes_bits_vector.
+    
+Admitted.
+  
 
   (* true if
 
@@ -678,10 +655,94 @@ Qed.
         (concatToList (BVxor 512 K OP) bits_inner)
  )
 
-
-
    *)
   
+(* ------------------ *)
+
+(* Parameter bbv (bytes : list Z) -> Bvector (length bytes). *)
+Parameter bbl : (list Z -> Blist).
+Parameter bbv_byte : forall n, (byte -> Bvector n).
+
+Theorem HMAC_spec_equiv : forall
+                            (k m h : list Z)
+                            (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
+                            (op ip : byte) (OP IP : Bvector (plus c p))
+                          (bits_inner : Bvector c) (bytes_inner : list Z),
+  ((length k) * 8)%nat = (c + p)%nat ->
+  (* bytes_to_bits k = K ->                  (* vector *) *) (* TODO dependent types *)
+  (* bbl m = M ->                  (* list *) *)
+  (* bbv_byte op = OP -> *)
+  (* bbv_byte ip = IP -> *)
+  True -> True -> True -> True ->
+  HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
+  HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
+  (* bytes_to_bits h = H. *)
+  bytes_bits_vector h H.
+  (* inductive works because it defers the type-level computation,
+     but function composition is computational... *)
+Proof.
+  intros k m h K M H op ip OP IP bits_inner bytes_inner.
+  intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
+  intros HMAC_abstract HMAC_concrete.
+  unfold p, c in *.
+  simpl in *.
+
+  unfold HMAC in *. simpl in *.
+  unfold HMAC_SHA256.HMAC in *.
+
+  unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
+  (* Still abstract: sha_h, sha_splitandpad_vector *)
+  Check sha_h. 
+  rewrite -> split_append_id in HMAC_abstract.
+
+Check (hash_words 256 sha_h sha_iv
+                          (BVxor 512 K IP :: sha_splitandpad_vector M)).
+
+Check HMAC_SHA256.INNER ip
+                       (map Byte.repr (HMAC_SHA256.mkKey k)) m.
+
+  unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
+  pose proof HMAC_inner_equiv as inner_equiv.
+  specialize inner_equiv with k m K M bits_inner bytes_inner ip IP.
+  rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
+
+  apply equiv.
+  
+
+(* 
+  Show: x ~ X -> f x ~ F X
+  or: x ~ X -> y ~ Y -> f x y ~ F X Y
+  or: f : b -> b, F -> B -> B
+
+      SHOW: x:b ~ X:B -> F = bB . f . Bb ->  f x ~ F X
+      f x ~ (bB . f . Bb) X
+      f x ~ bB (f (Bb X))
+      
+      x ~ X means that x = Bb X
+      so I need to show that f x = Bb (bB (f (Bb X))), given that x = Bb X
+
+      or: f x = bytes_to_bits bits_to_bytes f bytes_to_bits X
+          f bytes_to_bits x = bytes_to_bits bits_to_bytes f bytes_to_bits x
+          bytes_to_bits bits_to_bytes = id ON f bytes_to_bits x 
+          this depends on a property of f
+
+question: how is bits_to_bytes defined? TODO
+
+bytes = list Z (of length n)
+  bytes to bits: convert each Z to Bvector 8; concat (maybe reversing for endianness) 
+    into Bvector 8 * n
+bits = Bvector m
+  bits to bytes: 
+   0100010101110 : pad with front zeroes until multiple of 8? (possibly reverse and pad)
+     OR throw away the rest of the bits
+     OR return nothing 
+   e.g. 100 to a byte = 00000100 to a byte = 4 (as Z) 
+
+-> 
+ *)
+
+Abort.
+
 
 Theorem HMAC_spec_equiv' : forall
                             (k m h : list Z)
