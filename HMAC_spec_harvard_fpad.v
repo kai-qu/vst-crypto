@@ -922,8 +922,8 @@ Check @HMAC.
   unfold HMAC in *. simpl in *.
   unfold HMAC_SHA256.HMAC in *.
 
-Print bytes_bits_vector.
-Check equiv'.
+  Check equiv'.
+  Print bytes_bits_vector.
 
 (* TODO: relate first byte of input with first byte of output?
         but the output is fixed length?
@@ -960,8 +960,9 @@ Print bytes_bits_conv_vector.
     
     (* -- *)
 
-unfold HMAC_SHA256.innerArg. unfold HMAC_SHA256.mkArgZ. unfold HMAC_SHA256.mkArg.
+    unfold HMAC_SHA256.innerArg. unfold HMAC_SHA256.mkArgZ. unfold HMAC_SHA256.mkArg.
     
+
     (* -- *)
 
     rewrite -> functional_prog.SHA_256'_eq in *.
@@ -1008,11 +1009,59 @@ figure out how to approach proof: avoid 4-way induction
  *)
 
 
-  rewrite <- HMAC_abstract.
-  rewrite <- HMAC_concrete.
-
-
-  induction msgs_eq.
-
 
 Abort.
+
+    (* just try on hash function?
+       bytes_bits_vector (SHA (byte :: bytes))
+                          (bytes_to_bits . SHA . bits_to_bytes) (b0 :: ... :: b7 :: bits))
+
+just try on concatenation?
+
+msgs_eq: 
+c ++ m_bytes = c' ++' m_bits
+induction 
+
+c ++ (byte :: bytes) = c' ++' (b0 :: ... :: b7 :: bits)
+(it's actually c' :: sha_splitandpad_vector (b0 :: ... :: b7 :: bits) -- try later)
+given: c' = bytes_to_bits c (need to prove)
+       ++' = Vector.append (or list cons)
+       
+
+TODO: HMAC_lemmas proof techniques?
+maybe i should prove that it's impossible to prove equiv
+   
+
+     *)
+    
+Lemma concat_equiv :
+  forall (msg_byte : list Z) (msg_bits : Blist) (c_byte : list Z) (c_bits : Blist),
+    bytes_bits_lists msg_byte msg_bits
+    -> bytes_bits_lists c_byte c_bits
+    -> bytes_bits_lists (c_byte ++ msg_byte) (c_bits ++ msg_bits).
+(* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
+Proof.
+  intros msg_byte msg_bits c_byte c_bits.
+  intros msg_eq c_eq.
+  generalize dependent c_byte. generalize dependent c_bits.
+  induction msg_eq.
+    + intros.
+      repeat rewrite app_nil_r.
+      apply c_eq.
+    + intros.
+      induction c_eq.           (* might need to generalize *)
+      * repeat rewrite app_nil_l in *.
+        apply eq_cons.
+        apply msg_eq.
+        - apply H.
+      * simpl.
+        apply eq_cons.
+        apply IHc_eq.
+        - apply H0.
+Qed.                            
+
+(* ?? why does convertByteBits never need to be proven *)
+      
+  
+
+
