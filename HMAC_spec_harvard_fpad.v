@@ -661,7 +661,6 @@ Theorem equiv_prop : forall {t T : Type}
                   (x : t) (X : T),
                   tT_prop x X
                   -> f = (Tt @ F @ tT)
-                  (* -> tT_prop (f (Tt X)) (tT (f (Tt X))) *)
                   -> tT_prop (f x) (F X).
 Proof.
   intros t T tT Tt tT_prop f F x X.
@@ -770,7 +769,6 @@ Theorem HMAC_spec_equiv : forall
   (* TODO: dependent equality / John Major
      to substitute K for k, need theorems about JM equality?
      finish specifying theorem, intro and elim JMeq
-     qinxiang@princeton.edu
    *)
   (* bbl m = M ->                  (* list *) *)
   (* bbv_byte op = OP -> *)
@@ -1037,6 +1035,7 @@ Check Byte.unsigned.
 
 Lemma xor_equiv : forall (ip : byte) (k : list Z) (r_bytes : list Z)
                   (IP : Bvector (c + p)) (K : Bvector (c + p)) (r_bits : Bvector (c + p)),
+                    (length k * 8)%nat = (c + p) %nat ->
                     bytes_bits_conv_vector ip IP ->
                     bytes_bits_vector k K ->
                     map Byte.unsigned (
@@ -1052,8 +1051,14 @@ Proof.
   intros ips_eq keys_eq bytes_xor bits_xor.
   subst. unfold bytes_bits_conv_vector in *.
   unfold BVxor. SearchAbout Vector.map2.
+(* problem: k and ip are both fixed length -- might want to do computationally *)
+  (* induction keys_eq. *)
   
+Admitted.
 
+(* Lemma xor_equiv_comp : forall (ip : byte) (k : list Z) (r_bytes : list Z) *)
+(*                   (IP : Bvector (c + p)) (K : Bvector (c + p)) (r_bits : Bvector (c + p)), *)
+(*                     (length k * 8)%nat = (c + p) %nat -> *)
 
 Lemma concat_equiv :
   forall (l1 : list Z) (l2 : Blist) (m1 : list Z) (m2 : Blist),
@@ -1100,8 +1105,5 @@ Proof.
         - apply H0.
 Qed.                            
 
-(* ?? why does convertByteBits never need to be proven *)
-      
-  
 
 
