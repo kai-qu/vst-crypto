@@ -577,8 +577,9 @@ Theorem equiv' : forall {t T : Type} (* t = bits, T = bytes --
                   (x : t) (X : T),
                   x = Tt X      (* x ~ X *)
                   -> f = (Tt @ F @ tT)
-                  -> (tT @ Tt) = id
+                  -> (tT @ Tt) = id (* @ - comp *)
                   -> f x = Tt (F X). (* f x ~ F X -- byte_bits_vector *)
+(* HMAC_abs (bytes_to_bytes msg_byte) = bytes_to_bits (HMAC_CONCRETE msg_byte) *)
 
 (* TODO: start a section parametrized by ~, axioms about ~ *)
 Proof.
@@ -750,10 +751,13 @@ Lemma test' : forall (n : nat) (b1 : Bvector (S n)) (b2 : Bvector (n + 1)),
 Proof.
 Abort.  
 
+(*
+Doesn't typecheck, whereas the above does 
 Lemma test : forall (n : nat) (b1 : Bvector (S n)) (b2 : Bvector (n + 1)),
                b1 = b2.
 Proof.
-  
+  *)
+
 
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
@@ -775,13 +779,17 @@ Theorem HMAC_spec_equiv : forall
   HMAC p sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
   HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
   (* bytes_to_bits h = H. *)
-  JMeq (bytes_to_bits h) H.
+  JMeq (bytes_to_bits h) H.     (* H ~ h <- bytes_to_bits_vector, inductive def *)
+(* computational CONVERTS bytes to bits *)
+
   (* inductive works because it defers the type-level computation,
      but function composition is computational... *)
 Proof.
   intros k m h K M H op ip OP IP bits_inner bytes_inner.
   intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
   intros HMAC_abstract HMAC_concrete.
+  Check bytes_to_bits.
+  Print c.
   (* apply equiv. *) (* TODO *)
 
 SearchAbout JMeq.
@@ -856,33 +864,106 @@ Theorem HMAC_spec_equiv' : forall
   bytes_bits_lists m M ->
   bytes_bits_conv_vector op OP ->
   bytes_bits_conv_vector ip IP ->
-  HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H ->
-  HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *)
+  HMAC c sha_h sha_iv sha_splitandpad_vector OP IP K M = H -> (* bits: h <- conversion . byte_h *)
+  HMAC_SHA256.HMAC ip op m k = h -> (* m k, not k m *) (* bytes *)
   bytes_bits_vector h H.            (* TODO reverse capital/lowercase *)
 Proof.
   intros k m h K M H op ip OP IP.
   intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
   intros HMAC_abstract HMAC_concrete.
+
+subst h.
+subst H.
+induction msgs_eq.
+Focus 2.
+(*
+  + admit.
+    +*) 
+(*
+  remember K as K'.
+  assert (JMeq K K') by (subst; reflexivity).
+  clear HeqK'.
+  rewrite <- H0 in HMAC_abstract.
+
+  unfold bytes_bits_conv_vector in ops_eq, ips_eq.
+  pose (c + p)%nat as n0.
+  assert (c + p = n0)%nat by auto.
+  clearbody n0.
+  revert OP IP padded_key_len K' padded_keys_eq ops_eq ips_eq H.
+
+  Print bytes_bits_vector.
+  Print HMAC.
+  Print Vector.t.
+  Print bytes_bits_lists.
+
+  
+  Set Printing All.
++
+Check HMAC.
+Print bytes_bits_conv_vector.
+  remember (c + p)%nat as n0.
+  revert HMAC_abstract.
+Check @HMAC.
+  + induction padded_keys_eq.
+  
+    
+  induction h.                  (* TODO:  h nil -> H nil *)
+  (* or -- induction on m *)
+    + admit.                      (* use bullets *)
+    +                             (* a :: h <-> H1 :: H@ .... H8 ... :: H *)
+      rewrite <- HMAC_concrete.
+      rewrite <- HMAC_abstract.
+*)      
+  intros.
   unfold p, c in *.
   simpl in *.
 
+  (*  *)
   unfold HMAC in *. simpl in *.
   unfold HMAC_SHA256.HMAC in *.
 
+Print bytes_bits_vector.
+Check equiv'.
+
+(* TODO: relate first byte of input with first byte of output?
+        but the output is fixed length?
+        f (x :: xs) = ? ... f xs
+
+f x = g (h x)
+h (x :: xs) = H x (h xs)
+
+
+
+ *)
+
   unfold HMAC_2K in *. unfold GHMAC_2K in *. (* unfold splitVector in *. *)
+
+Print HMAC_SHA256.OUTER.
+(*
+  apply IHmsgs_eq.
   (* Still abstract: sha_h, sha_splitandpad_vector *)
-  Check sha_h. 
-  rewrite -> split_append_id in HMAC_abstract.
+  Check sha_h.  *)
 
-Check (hash_words 256 sha_h sha_iv
-                          (BVxor 512 K IP :: sha_splitandpad_vector M)).
+  rewrite -> split_append_id.
 
-Check HMAC_SHA256.INNER ip
-                       (map Byte.repr (HMAC_SHA256.mkKey k)) m.
+Print bytes_bits_conv_vector.
+  
+(* Check (hash_words 256 sha_h sha_iv *)
+                          (* (BVxor 512 K IP :: sha_splitandpad_vector M)). *)
 
-  unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *.
+(* Check HMAC_SHA256.INNER ip *)
+                       (* (map Byte.repr (HMAC_SHA256.mkKey k)) m. *)
+
+  unfold HMAC_SHA256.OUTER in *. unfold HMAC_SHA256.INNER in *. 
 
     unfold SHA256_.Hash in *.
+    
+    (* -- *)
+
+unfold HMAC_SHA256.innerArg. unfold HMAC_SHA256.mkArgZ. unfold HMAC_SHA256.mkArg.
+    
+    (* -- *)
+
     rewrite -> functional_prog.SHA_256'_eq in *.
     unfold SHA256.SHA_256 in *.
     repeat rewrite <- sha_padding_lemmas.pad_compose_equal in *.
