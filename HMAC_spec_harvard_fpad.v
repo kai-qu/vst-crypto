@@ -579,7 +579,7 @@ Theorem equiv' : forall {t T : Type} (* t = bits, T = bytes --
                   -> f = (Tt @ F @ tT)
                   -> (tT @ Tt) = id (* @ - comp *)
                   -> f x = Tt (F X). (* f x ~ F X -- byte_bits_vector *)
-(* HMAC_abs (bytes_to_bytes msg_byte) = bytes_to_bits (HMAC_CONCRETE msg_byte) *)
+(* HMAC_abs (bytes_to_bytes m1) = bytes_to_bits (HMAC_CONCRETE m1) *)
 
 (* TODO: start a section parametrized by ~, axioms about ~ *)
 Proof.
@@ -1033,30 +1033,70 @@ maybe i should prove that it's impossible to prove equiv
    
 
      *)
-    
+Check Byte.unsigned.
+
+Lemma xor_equiv : forall (ip : byte) (k : list Z) (r_bytes : list Z)
+                  (IP : Bvector (c + p)) (K : Bvector (c + p)) (r_bits : Bvector (c + p)),
+                    bytes_bits_conv_vector ip IP ->
+                    bytes_bits_vector k K ->
+                    map Byte.unsigned (
+                          map
+                            (fun p0 : Integers.byte * Integers.byte =>
+                               Byte.xor (fst p0) (snd p0))
+                            (combine (map Byte.repr (HMAC_SHA256.mkKey k))
+                                     (HMAC_SHA256.sixtyfour ip))) = r_bytes ->
+                    BVxor 512 K IP = r_bits ->
+                    bytes_bits_vector r_bytes r_bits.
+Proof.
+  intros ip k r_bytes IP K r_bits.
+  intros ips_eq keys_eq bytes_xor bits_xor.
+  subst. unfold bytes_bits_conv_vector in *.
+  unfold BVxor. SearchAbout Vector.map2.
+  
+
+
 Lemma concat_equiv :
-  forall (msg_byte : list Z) (msg_bits : Blist) (c_byte : list Z) (c_bits : Blist),
-    bytes_bits_lists msg_byte msg_bits
-    -> bytes_bits_lists c_byte c_bits
-    -> bytes_bits_lists (c_byte ++ msg_byte) (c_bits ++ msg_bits).
+  forall (l1 : list Z) (l2 : Blist) (m1 : list Z) (m2 : Blist),
+    bytes_bits_lists l1 l2
+    -> bytes_bits_lists m1 m2
+    -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2).
 (* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
 Proof.
-  intros msg_byte msg_bits c_byte c_bits.
-  intros msg_eq c_eq.
-  generalize dependent c_byte. generalize dependent c_bits.
-  induction msg_eq.
-    + intros.
-      repeat rewrite app_nil_r.
-      apply c_eq.
-    + intros.
-      induction c_eq.           (* might need to generalize *)
+  intros l1 l2 m1 m2.
+  intros fst_eq snd_eq.
+  generalize dependent m1. generalize dependent m2.
+  induction fst_eq; intros.
+  - repeat rewrite app_nil_l.
+    apply snd_eq.
+  - simpl.
+    apply eq_cons.
+    + apply IHfst_eq.
+      apply snd_eq.
+    + apply H.
+Qed.      
+
+(* If inducting on the second param *)
+Lemma concat_equiv_snd :
+  forall (l1 : list Z) (l2 : Blist) (m1 : list Z) (m2 : Blist),
+    bytes_bits_lists l1 l2
+    -> bytes_bits_lists m1 m2
+    -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2).
+(* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
+Proof.
+  intros l1 l2 m1 m2.
+  intros fst_eq snd_eq.
+  generalize dependent l1. generalize dependent l2.
+  induction snd_eq; intros.
+    + repeat rewrite app_nil_r.
+      apply fst_eq.
+    + induction fst_eq.           (* might need to generalize *)
       * repeat rewrite app_nil_l in *.
         apply eq_cons.
-        apply msg_eq.
+        apply snd_eq.
         - apply H.
       * simpl.
         apply eq_cons.
-        apply IHc_eq.
+        apply IHfst_eq.
         - apply H0.
 Qed.                            
 
