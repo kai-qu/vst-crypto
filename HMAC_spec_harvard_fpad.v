@@ -1080,7 +1080,9 @@ Proof.
     + apply H.
 Qed.      
 
-(* If inducting on the second param *)
+(* If inducting on the second param 
+TODO: try proving this without inducting on the first param...?
+*)
 Lemma concat_equiv_snd :
   forall (l1 : list Z) (l2 : Blist) (m1 : list Z) (m2 : Blist),
     bytes_bits_lists l1 l2
