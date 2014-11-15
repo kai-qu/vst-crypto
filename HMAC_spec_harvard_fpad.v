@@ -1081,13 +1081,37 @@ Proof.
 Qed.      
 
 (* If inducting on the second param 
-TODO: try proving this without inducting on the first param...?
+TODO: try proving this without inducting on the first param...? or bytes_bits_vector firs param
 *)
 Lemma concat_equiv_snd :
   forall (l1 : list Z) (l2 : Blist) (m1 : list Z) (m2 : Blist),
     bytes_bits_lists l1 l2
     -> bytes_bits_lists m1 m2
     -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2).
+(* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
+Proof.
+  intros l1 l2 m1 m2.
+  intros fst_eq snd_eq.
+  generalize dependent l1. generalize dependent l2.
+  induction snd_eq; intros.
+    + repeat rewrite app_nil_r.
+      apply fst_eq.
+    + induction fst_eq.           (* might need to generalize *)
+      * repeat rewrite app_nil_l in *.
+        apply eq_cons.
+        apply snd_eq.
+        - apply H.
+      * simpl.
+        apply eq_cons.
+        apply IHfst_eq.
+        - apply H0.
+Qed.                            
+
+Lemma concat_equiv_snd_vec :
+  forall (n: nat) (l1 : list Z) (l2 : Bvector n) (m1 : list Z) (m2 : Blist),
+    bytes_bits_vector l1 l2
+    -> bytes_bits_lists m1 m2
+    -> bytes_bits_lists (l1 ++ m1) (Vectorl2 ++ m2).
 (* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
 Proof.
   intros l1 l2 m1 m2.

@@ -161,6 +161,13 @@ Function Round  (regs: registers) (M: Z ->int) (t: Z)
 Proof. intros; apply Z2Nat.inj_lt; omega.
 Qed.
 
+(* TODO: what's the difference between these two?
+what's the use of [measure]? *)
+
+Check rnd_function.
+Check Round.
+Print registers.                (* list int *)
+
 Definition hash_block (r: registers) (block: list int) : registers :=
       map2 Int.add r (Round r (nthi block) 63).
 
@@ -173,7 +180,10 @@ Proof. intros.
  destruct (lt_dec (length msg) 16).
  rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
  rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
-Qed.
+Defined.
+
+Transparent hash_blocks.
+Transparent hash_block.
 
 Fixpoint intlist_to_Zlist (l: list int) : list Z :=
  match l with
@@ -186,5 +196,6 @@ Fixpoint intlist_to_Zlist (l: list int) : list Z :=
      intlist_to_Zlist r
  end.
 
+(* TODO: process_msg vs. hash_blocks *)
 Definition SHA_256 (str : list Z) : list Z :=
     intlist_to_Zlist (hash_blocks init_registers (generate_and_pad str)).

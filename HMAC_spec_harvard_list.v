@@ -193,10 +193,149 @@ Admitted.
 
 (* ------- *)
 
+Lemma inner_fst_equiv : forall (k ip bit_xor : Blist)
+                               (K byte_xor : list Z) (IP : byte),
+                          ((length k) * 8)%nat = (c + p)%nat ->
+                          Zlength K = Z.of_nat SHA256_.BlockSize ->
+                          (* TODO: first implies this *)
+                          bytes_bits_lists k K ->
+                          bytes_bits_lists ip (byte_to_64list IP) ->
+                          bit_xor = BLxor k ip ->
+                          byte_xor = (map Byte.unsigned
+       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) ->
+                          bytes_bits_lists bit_xor byte_xor.
+
+Proof.
+  intros k ip bit_xor K byte_xor IP.
+  intros k_bitlen k_bytelen k_eq ip_conv_eq bit_res byte_res.
+  subst.
+
+  unfold BLxor.
+
+  unfold HMAC_SHA256.mkArg.
+  unfold HMAC_SHA256.mkKey.
+
+  rewrite -> k_bytelen. simpl.
+  
+  unfold HMAC_SHA256.zeroPad.
+  SearchAbout Zlength.
+  rewrite -> Zlength_correct in k_bytelen.
+  inversion k_bytelen.
+  unfold Byte.xor. SearchAbout Byte.xor. SearchAbout Z.lxor.
+
+(* might need a lemma about BLxor and Byte.xor *)
+
+Admitted.
+  
+(*  
+  (* --- *)
+  
+  induction k_eq.
+  (* TODO: this particular property is true of key and ipad of any (equal) size, so even
+     if they are of fixed size here, that would be a subcase
+
+     maybe not? maybe it's false if key is empty
+
+     key is zero-padded...
+
+     TODO: maybe I should just write a bit version of lennart's spec,
+     then slowly convert it to adam's
+   *)
+
+  - 
+    simpl. 
+*)
+
+
+(* TODO: bytes-bits stuff on SHA *)
+(* 
+   bytes_bits_lists
+     (hash_words_padded sha_h sha_iv sha_splitandpad
+        (BLxor k op ++
+         hash_words sha_h sha_iv
+           (BLxor k ip
+            :: sha_splitandpad
+                 (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits))))
+
+     (SHA256_.Hash
+        (HMAC_SHA256.mkArgZ (map Byte.repr (HMAC_SHA256.mkKey K)) OP ++
+         SHA256_.Hash
+           (HMAC_SHA256.mkArgZ (map Byte.repr (HMAC_SHA256.mkKey K)) IP ++
+            byte :: bytes)))
+
+  BBL i1 I1 -> ... -> BBL in IN -> BBL (sha i1 ... in) (SHA I1 ... IN)
+
+should be slightly easier -- 
+the SHA here is entirely made of wrapped versions of our functions
+
+ *)
+
+Definition concat {A : Type} (l : list (list A)) : list A :=
+  flat_map id l.
+
+SearchAbout int.
+
+Print sha_padding_lemmas.generate_and_pad'.
+Check sha_padding_lemmas.pad.
+
+Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
+                            bytes_bits_lists
+                              (concat (sha_splitandpad bits))
+                              (sha_padding_lemmas.pad bytes).
+Proof.
+  intros bits bytes.
+  unfold concat.
+  unfold pad.
+(* TODO: define sha_splitandpad *)
+
+Admitted.  
+
+Lemma SHA_equiv : forall (bits : Blist) (bytes : list Z),
+                    (* assumptions *)
+  bytes_bits_lists
+    (hash_words_padded sha_h sha_iv sha_splitandpad bits)
+    (SHA256_.Hash bytes).
+
+Proof.
+  intros bits bytes.
+  unfold SHA256_.Hash.
+  rewrite -> functional_prog.SHA_256'_eq.
+  unfold SHA256.SHA_256.
+  unfold hash_words_padded.
+  replace ((hash_words sha_h sha_iv @ sha_splitandpad) bits) with
+  (hash_words sha_h sha_iv (sha_splitandpad bits)).
+  -
+    repeat rewrite <- sha_padding_lemmas.pad_compose_equal in *.
+    unfold sha_padding_lemmas.generate_and_pad' in *.
+    unfold hash_words.
+    unfold h_star.
+
+    unfold SHA256.hash_blocks.
+    (* unfold SHA256.hash_blocks_terminate. *)
+    (* simpl. *)
+(* TODO *)
+
+    pose proof splitandpad_equiv as splitandpad_equiv.
+    specialize (splitandpad_equiv bits bytes).
+    induction splitandpad_equiv.
+
+    +
+      simpl.
+(* TODO: need sha_h, sha_splitandpad *)
+(* TODO: how to use this? *)
+
+
+Admitted.
+  
+
+(* ---------- *)
+
 Theorem HMAC_spec_equiv : forall
                             (K M H : list Z) (OP IP : byte)
                             (k m h : Blist) (op ip : Blist),
   ((length k) * 8)%nat = (c + p)%nat ->
+  Zlength K = Z.of_nat SHA256_.BlockSize ->
+(* TODO: first implies this *)
   (* TODO: might need more hypotheses about lengths *)
   bytes_bits_lists k K ->
   bytes_bits_lists m M ->
@@ -207,7 +346,7 @@ Theorem HMAC_spec_equiv : forall
   bytes_bits_lists h H.
 Proof.
   intros K M H OP IP k m h op ip.
-  intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
+  intros padded_key_len padded_key_len_byte padded_keys_eq msgs_eq ops_eq ips_eq.
   intros HMAC_abstract HMAC_concrete.
 
   intros.
@@ -228,20 +367,26 @@ Proof.
 
     unfold HMAC_SHA256.INNER.
     unfold HMAC_SHA256.innerArg.
-    unfold HMAC_SHA256.mkArgZ.
-    Print HMAC_SHA256.mkArg.
-    unfold HMAC_SHA256.mkArg.
+    (* unfold HMAC_SHA256.mkArgZ. *)
+    (* Print HMAC_SHA256.mkArg. *)
+    (* unfold HMAC_SHA256.mkArg. *)
 
     unfold HMAC_SHA256.OUTER.
     unfold HMAC_SHA256.outerArg.
-    unfold HMAC_SHA256.mkArgZ.
-    unfold HMAC_SHA256.mkArg.
+    (* unfold HMAC_SHA256.mkArgZ. *)
+    (* unfold HMAC_SHA256.mkArg. *)
 
     unfold HMAC_2K.
     unfold GHMAC_2K.
     Print split_append_id.
     rewrite -> split_append_id.
 
+    (* pose inner_fst_equiv as inner_fst_equiv. *)
+    (* apply inner_fst_equiv with (k := k) (ip := ip) (K := K) (IP := IP); auto. *)
+    pose SHA_equiv as SHA_equiv.
+    
+
+    
 (* HMAC IP OP M K =
     H ( K (+) OP      ++
         H ((K (+) IP) ++ M)
@@ -275,31 +420,4 @@ Abort.
                     (HMAC_SHA256.sixtyfour IP))) ++ 
             byte :: bytes)
 *)
-
-Lemma inner_fst_equiv : forall (k ip bit_xor : Blist)
-                               (K byte_xor : list Z) (IP : byte),
-                          bytes_bits_lists k K ->
-                          bytes_bits_lists ip (byte_to_64list IP) ->
-                          bit_xor = BLxor k ip ->
-                          byte_xor = (map Byte.unsigned
-       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) ->
-                          bytes_bits_lists bit_xor byte_xor.
-
-Proof.
-  intros k ip bit_xor K byte_xor IP.
-  intros k_eq ip_conv_eq bit_res byte_res.
-  subst.
-
-  unfold BLxor.
-
-  unfold HMAC_SHA256.mkArg.
-  unfold HMAC_SHA256.mkKey.
-
-  Print bytes_bits_lists.
-  
-  induction k_eq.
-  (* TODO: this particular property is true of key and ipad of any (equal) size, so even
-     if they are of fixed size here, that would be a subcase *)
-
-  - simpl. 
 
