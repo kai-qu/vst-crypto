@@ -161,6 +161,9 @@ Function Round  (regs: registers) (M: Z ->int) (t: Z)
 Proof. intros; apply Z2Nat.inj_lt; omega.
 Qed.
 
+Check Round.
+Check nthi.
+
 (* TODO: what's the difference between these two?
 what's the use of [measure]? *)
 

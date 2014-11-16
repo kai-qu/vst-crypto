@@ -275,29 +275,46 @@ Definition concat {A : Type} (l : list (list A)) : list A :=
 
 SearchAbout int.
 
+Check sha_h.                    (* Blist -> Blist -> Blist *)
+(* see Round and rnd_function in SHA256 *)
+Check sha_iv.
 Print sha_padding_lemmas.generate_and_pad'.
 Check sha_padding_lemmas.pad.
 
+(* TODO: 11/16/14 
+
+- figure out Rnd/Round
+- define sha_h
+   - figure out how to work with hash_blocks_terminate
+- define sha_splitandpad
+- figure out how to unfold the proofs involving SHA & which lemma to start with
+- figure out how they would compose
+- 
+
+ *)
+
 Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
+                            bytes_bits_lists bits bytes ->
                             bytes_bits_lists
                               (concat (sha_splitandpad bits))
                               (sha_padding_lemmas.pad bytes).
 Proof.
-  intros bits bytes.
+  intros bits bytes inputs_eq.
   unfold concat.
   unfold pad.
 (* TODO: define sha_splitandpad *)
 
 Admitted.  
 
-Lemma SHA_equiv : forall (bits : Blist) (bytes : list Z),
+Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                     (* assumptions *)
-  bytes_bits_lists
-    (hash_words_padded sha_h sha_iv sha_splitandpad bits)
-    (SHA256_.Hash bytes).
+                    bytes_bits_lists bits bytes ->
+                    bytes_bits_lists
+                      (hash_words_padded sha_h sha_iv sha_splitandpad bits)
+                      (SHA256_.Hash bytes).
 
 Proof.
-  intros bits bytes.
+  intros bits bytes input_eq.
   unfold SHA256_.Hash.
   rewrite -> functional_prog.SHA_256'_eq.
   unfold SHA256.SHA_256.
@@ -317,16 +334,35 @@ Proof.
 
     pose proof splitandpad_equiv as splitandpad_equiv.
     specialize (splitandpad_equiv bits bytes).
-    induction splitandpad_equiv.
+    (* induction splitandpad_equiv. *)
 
     +
-      simpl.
+
+      (* simpl. *)
 (* TODO: need sha_h, sha_splitandpad *)
 (* TODO: how to use this? *)
 
 
 Admitted.
-  
+
+(*
+TODO: list Blist instead of Blist?
+Maybe I should rewrite SHA to operate on list Blist
+
+Lemma SHA_equiv_nopad : forall (bits_list : list Blist) (bytes : list Z),
+                    (* assumptions *)
+                    bytes_bits_lists' bits_list bytes ->
+                    bytes_bits_lists'
+                      (* note that bits_list is:
+                         [thing of block size] :: [thing padded to be of block size] *)
+                      (hash_words sha_h sha_iv bits_list)
+                      (SHA256_.Hash bytes).
+
+Proof.
+
+
+Admitted.
+*)  
 
 (* ---------- *)
 
@@ -383,7 +419,7 @@ Proof.
 
     (* pose inner_fst_equiv as inner_fst_equiv. *)
     (* apply inner_fst_equiv with (k := k) (ip := ip) (K := K) (IP := IP); auto. *)
-    pose SHA_equiv as SHA_equiv.
+    (* TODO: pose proof (SHA_equiv  ). *)
     
 
     
