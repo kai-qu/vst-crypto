@@ -23,17 +23,10 @@ Definition splitList {A : Type} (h : nat) (t : nat) (l : list A) : (list A * lis
 Definition concat {A : Type} (l : list (list A)) : list A :=
   flat_map id l.
 
-(*
-Definition mkArg (key:list byte) (pad:byte): list byte :=
-       (map (fun p => Byte.xor (fst p) (snd p))
-          (combine key (sixtyfour pad))).
-Definition mkArgZ key (pad:byte): list Z :=
-     map Byte.unsigned (mkArg key pad). *)
 
 (* TODO: length proofs (length xs = length ys) *)
 Definition BLxor (xs : Blist) (ys : Blist) :=
   map (fun p => xorb (fst p) (snd p)) (combine xs ys).
-(* TODO pattern match on tuples? *)
 
 Section HMAC.
 
@@ -131,9 +124,6 @@ Check HMAC.
        (Blist -> list Blist) -> Blist -> Blist -> Blist -> Blist -> Blist *)
 
 (*
-Definition c:nat := (SHA256_.DigestLength * 8)%nat.
-Definition p:=(32 * 8)%nat.
-
 Parameter sha_iv : Bvector (SHA256_.DigestLength * 8).
 Parameter sha_h : Bvector c -> Bvector (c + p) -> Bvector c.
 Parameter sha_splitandpad_vector :
@@ -142,7 +132,6 @@ Parameter sha_splitandpad_vector :
 (* Parameter fpad : Bvector p. *)
 *)
 
-(* TODO does HMAC still need these params? *)
 Definition c:nat := (SHA256_.DigestLength * 8)%nat.
 Definition p:=(32 * 8)%nat.
 
@@ -199,6 +188,7 @@ Admitted.
 
 (* ------- *)
 
+(* Prove that the inner xor lemma is true on at least one example *)
 Section Example. 
 
  Definition k:Blist := concat (list_repeat 64 [true; true; false; false; true; false; true; true]).
@@ -241,15 +231,12 @@ Lemma inner_fst_equiv_example : exists k (ip  : Blist) K (IP : Z),
 
 Proof.
   exists k, ip, K, IP. repeat split.
-(*    assert (length K = 64%nat). unfold K. rewrite length_list_repeat. reflexivity.
-    rewrite Zlength_correct, H. split. reflexivity.
-   split.*)
    apply kKcorrect. apply ipcorrect. 
   unfold k, K, ip, IP. simpl. unfold BLxor. simpl.
   repeat constructor; apply ONE.
 Qed.
 
-
+(* TODO: stuck here *)
 Lemma xor_correspondence :
   forall (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 : bool)
          (byte0 byte1 : Z),
@@ -264,8 +251,9 @@ Proof.
   intros.
   generalize dependent H. generalize dependent H0. intros H0 H1.
   unfold convertByteBits. unfold asZ.
+  (* TODO: Maybe this should be computational *)
   (* simpl. *)
-  Print Z.lxor.
+  Print Z.lxor. Print Pos.lxor.
   SearchAbout Z.lxor.
   (* need to exhibit b16 ... b23 *)
    
@@ -368,70 +356,15 @@ Proof.
    - apply H1.
 Qed.
 
-  
-  
-
-(* TODO: try proving an example on something of fixed length?
-e.g. 
-
-len xs = 5 ->
-len (xs ++ xs) = 10
-
-i would prove this by proving that
-len (xs ++ xs) = 2 * len xs <-- does not make specific statement about length
-
-or len xs = 5 ->
-len (map f xs) = 5
-
-i would prove this as
-len xs = len (map f xs)
-
-len xs = 5 ->
-len (if len xs = 5 then map f xs else []) = 5
-doesn't require induction...
-
-or -- prove this inner statement (map f xs ~ map g ys) is true for any length
-then prove the outer statement for that particular length of ip and k
-
-
- *)
 
 Eval compute in Byte.xor (Byte.repr 0) (Byte.repr 100).
 Eval compute in Byte.xor (Byte.repr 100) (Byte.repr 100).
 Eval compute in Byte.xor (Byte.repr 50) (Byte.repr 5).
 
-
-(*
-TODO:
-Byte.xor B1 B2 = B3
-        (1 2 ... 8) (1 2 ... 8) (1 2 ... 8)
-
-xorb b1 b2 = b3
-
-maybe:
-map xorb (B2b B1) (B2b B2) = B2b B3?
-
-
-Lemma  
-        (map g y) = byte::bytes -> exists b1 .. b8, tail (map f x) = [b1,....,b8] ++ tail,
-                 
-       -> bytes_bits_lists (map f x) (map g y).
-
-
-
-Zlength_correct in H0. simpl in H0.  rewrite H0.  simpl. repeat constructor; apply ONE.
-(*    assert (length K = 64%nat). unfold K. rewrite length_list_repeat. reflexivity.
-    rewrite Zlength_correct, H. split. reflexivity.
-   split.*)
-   apply kKcorrect. apply ipcorrect. 
-  unfold k, K, ip, IP. simpl. unfold BLxor. simpl.
-  repeat constructor; apply ONE.
-Qed.
-*)
-
 End Example.
 
 (* Require Import HMAC_lemmas. *)
+(* TODO *)
 
 (*
 Lemma inner_fst_equiv : forall (k ip bit_xor : Blist)
@@ -471,20 +404,6 @@ Proof.
 Admitted.
 *)
 
-  (* Computational tests *)
-
-(*
-Definition byte_xor (K : list Z) (IP : byte) :=
-  map Byte.unsigned
-       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP).
-
-Print Byte.int.
-Transparent Byte.repr.
-Eval compute in byte_xor [1;2;3;4] (Byte.repr 54).
-Eval compute in BLxor [true; true; false] [false; true; false].
-
-*)
-  
 (* TODO: HMAC_lemmas has lemmas about Byte.unsigned, Byte.repr, mkArg.
 can admit for now *)
 
@@ -494,16 +413,6 @@ can admit for now *)
   (* --- *)
   
   induction k_eq.
-  (* TODO: this particular property is true of key and ipad of any (equal) size, so even
-     if they are of fixed size here, that would be a subcase
-
-     maybe not? maybe it's false if key is empty
-
-     key is zero-padded...
-
-     TODO: maybe I should just write a bit version of lennart's spec,
-     then slowly convert it to adam's
-   *)
 
   - 
     simpl. 
@@ -611,7 +520,7 @@ Proof.
 Admitted.
 
 (*
-TODO: list Blist instead of Blist?
+TODO: list Blist instead of Blist? Types don't work here
 Maybe I should rewrite SHA to operate on list Blist
 
 Lemma SHA_equiv_nopad : forall (bits_list : list Blist) (bytes : list Z),
@@ -707,18 +616,4 @@ Proof.
      *)
 
 Abort.
-
-(*
-(BLxor k ip
-            :: sha_splitandpad
-                 (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits))
-
- (map Byte.unsigned
-              (map
-                 (fun p0 : Integers.byte * Integers.byte =>
-                  Byte.xor (fst p0) (snd p0))
-                 (combine (map Byte.repr (HMAC_SHA256.mkKey K))
-                    (HMAC_SHA256.sixtyfour IP))) ++ 
-            byte :: bytes)
-*)
 
