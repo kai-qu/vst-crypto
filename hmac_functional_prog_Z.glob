@@ -1,0 +1,222 @@
+DIGEST 78d8f4e5033ebd31a3e2e675296eb969
+FHMAC_functional_prog_Z
+R15:22 Integers <> <> lib
+R40:45 Coqlib <> <> lib
+R63:80 Coq.Strings.String <> <> lib
+R98:114 Coq.Strings.Ascii <> <> lib
+R132:135 Coq.Lists.List <> <> lib
+modtype 295:307 <> HASH_FUNCTION
+ax 322:330 HASH_FUNCTION BlockSize
+R332:334 Coq.Init.Datatypes <> nat ind
+ax 385:396 HASH_FUNCTION DigestLength
+R399:401 Coq.Init.Datatypes <> nat ind
+ax 452:455 HASH_FUNCTION Hash
+R469:472 Coq.Init.Datatypes <> list ind
+R474:474 Coq.Numbers.BinNums <> Z ind
+R459:462 Coq.Init.Datatypes <> list ind
+R464:464 Coq.Numbers.BinNums <> Z ind
+R481:493 HMAC_functional_prog_Z <> <> modtype
+modtype 510:520 <> HMAC_Module
+ax 535:538 HMAC_Module HMAC
+R571:574 Coq.Init.Datatypes <> list ind
+R576:576 Coq.Numbers.BinNums <> Z ind
+R561:564 Coq.Init.Datatypes <> list ind
+R566:566 Coq.Numbers.BinNums <> Z ind
+R551:554 Coq.Init.Datatypes <> list ind
+R556:556 Coq.Numbers.BinNums <> Z ind
+R546:546 Coq.Numbers.BinNums <> Z ind
+R541:541 Coq.Numbers.BinNums <> Z ind
+R583:593 HMAC_functional_prog_Z <> <> modtype
+R617:629 HMAC_functional_prog_Z <> <> mod
+R636:646 HMAC_functional_prog_Z <> <> mod
+mod 604:611 <> HMAC_FUN
+def 658:662 HMAC_FUN Nlist
+R671:671 HMAC_functional_prog_Z <> A var
+R677:680 Coq.Init.Datatypes <> list ind
+R682:682 HMAC_functional_prog_Z <> A var
+R694:694 HMAC_functional_prog_Z <> n var
+R701:701 Coq.Init.Datatypes <> O constr
+R706:708 Coq.Init.Datatypes <> nil constr
+R714:714 Coq.Init.Datatypes <> S constr
+R722:725 Coq.Init.Datatypes <> :list_scope:x_'::'_x not
+R721:721 HMAC_functional_prog_Z <> i var
+R726:730 HMAC_functional_prog_Z <> Nlist def
+R732:732 HMAC_functional_prog_Z <> i var
+def 755:763 HMAC_FUN sixtyfour
+R772:772 HMAC_functional_prog_Z <> A var
+R776:779 Coq.Init.Datatypes <> list ind
+R781:781 HMAC_functional_prog_Z <> A var
+R785:789 HMAC_functional_prog_Z HMAC_FUN Nlist def
+R793:804 HMAC_functional_prog_Z HF BlockSize defax
+R791:791 HMAC_functional_prog_Z <> i var
+def 881:887 HMAC_FUN zeroPad
+R893:896 Coq.Init.Datatypes <> list ind
+R898:898 Coq.Numbers.BinNums <> Z ind
+R903:906 Coq.Init.Datatypes <> list ind
+R908:908 Coq.Numbers.BinNums <> Z ind
+R916:919 Coq.Init.Datatypes <> :list_scope:x_'++'_x not
+R915:915 HMAC_functional_prog_Z <> k var
+R920:924 HMAC_functional_prog_Z HMAC_FUN Nlist def
+R942:942 Coq.Init.Peano <> :nat_scope:x_'-'_x not
+R930:941 HMAC_functional_prog_Z HF BlockSize defax
+R943:948 Coq.Lists.List <> length syndef
+R950:950 HMAC_functional_prog_Z <> k var
+R926:927 Coq.Numbers.BinNums <> Z0 constr
+def 966:970 HMAC_FUN mkKey
+R975:978 Coq.Init.Datatypes <> list ind
+R980:980 Coq.Numbers.BinNums <> Z ind
+R985:988 Coq.Init.Datatypes <> list ind
+R990:990 Coq.Numbers.BinNums <> Z ind
+R1000:1004 Coq.ZArith.BinInt Z gtb def
+R1019:1026 Coq.ZArith.BinInt Z of_nat def
+R1028:1039 HMAC_functional_prog_Z HF BlockSize defax
+R1007:1013 Coq.ZArith.Zcomplements <> Zlength def
+R1015:1015 HMAC_functional_prog_Z <> l var
+R1079:1085 HMAC_functional_prog_Z HMAC_FUN zeroPad def
+R1087:1087 HMAC_functional_prog_Z <> l var
+R1050:1056 HMAC_functional_prog_Z HMAC_FUN zeroPad def
+R1059:1065 HMAC_functional_prog_Z HF Hash defax
+R1067:1067 HMAC_functional_prog_Z <> l var
+def 1158:1162 HMAC_FUN mkArg
+R1169:1172 Coq.Init.Datatypes <> list ind
+R1174:1177 Integers <> byte syndef
+R1185:1185 Coq.Numbers.BinNums <> Z ind
+R1189:1192 Coq.Init.Datatypes <> list ind
+R1194:1197 Integers <> byte syndef
+R1211:1213 Coq.Lists.List <> map def
+R1262:1268 Coq.Lists.List <> combine def
+R1275:1277 Coq.Lists.List <> map def
+R1290:1298 HMAC_functional_prog_Z HMAC_FUN sixtyfour def
+R1300:1302 HMAC_functional_prog_Z <> pad var
+R1279:1287 Integers Byte repr def
+R1270:1272 HMAC_functional_prog_Z <> key var
+R1225:1232 Integers Byte xor def
+R1243:1245 Coq.Init.Datatypes <> snd def
+R1247:1247 HMAC_functional_prog_Z <> p var
+R1235:1237 Coq.Init.Datatypes <> fst def
+R1239:1239 HMAC_functional_prog_Z <> p var
+def 1321:1326 HMAC_FUN mkArgZ
+R1337:1337 Coq.Numbers.BinNums <> Z ind
+R1341:1344 Coq.Init.Datatypes <> list ind
+R1346:1346 Coq.Numbers.BinNums <> Z ind
+R1357:1359 Coq.Lists.List <> map def
+R1376:1380 HMAC_functional_prog_Z HMAC_FUN mkArg def
+R1386:1388 HMAC_functional_prog_Z <> pad var
+R1382:1384 HMAC_functional_prog_Z <> key var
+R1361:1373 Integers Byte unsigned def
+def 1538:1545 HMAC_FUN innerArg
+R1557:1560 Coq.Init.Datatypes <> list ind
+R1562:1562 Coq.Numbers.BinNums <> Z ind
+R1571:1574 Coq.Init.Datatypes <> list ind
+R1576:1576 Coq.Numbers.BinNums <> Z ind
+R1583:1583 Coq.Init.Datatypes <> :list_scope:x_'++'_x not
+R1597:1601 Coq.Init.Datatypes <> :list_scope:x_'++'_x not
+R1584:1589 HMAC_functional_prog_Z HMAC_FUN mkArgZ def
+R1595:1596 HMAC_functional_prog_Z <> IP var
+R1591:1593 HMAC_functional_prog_Z <> key var
+R1602:1605 HMAC_functional_prog_Z <> text var
+def 1620:1624 HMAC_FUN INNER
+R1639:1645 HMAC_functional_prog_Z HF Hash defax
+R1648:1655 HMAC_functional_prog_Z HMAC_FUN innerArg def
+R1665:1665 HMAC_functional_prog_Z <> k var
+R1660:1663 HMAC_functional_prog_Z <> text var
+R1657:1658 HMAC_functional_prog_Z <> IP var
+def 1681:1688 HMAC_FUN outerArg
+R1704:1707 Coq.Init.Datatypes <> list ind
+R1709:1709 Coq.Numbers.BinNums <> Z ind
+R1717:1720 Coq.Init.Datatypes <> list ind
+R1722:1722 Coq.Numbers.BinNums <> Z ind
+R1729:1729 Coq.Init.Datatypes <> :list_scope:x_'++'_x not
+R1743:1747 Coq.Init.Datatypes <> :list_scope:x_'++'_x not
+R1730:1735 HMAC_functional_prog_Z HMAC_FUN mkArgZ def
+R1741:1742 HMAC_functional_prog_Z <> OP var
+R1737:1739 HMAC_functional_prog_Z <> key var
+R1748:1755 HMAC_functional_prog_Z <> innerRes var
+def 1770:1774 HMAC_FUN OUTER
+R1793:1799 HMAC_functional_prog_Z HF Hash defax
+R1802:1809 HMAC_functional_prog_Z HMAC_FUN outerArg def
+R1823:1823 HMAC_functional_prog_Z <> k var
+R1814:1821 HMAC_functional_prog_Z <> innerRes var
+R1811:1812 HMAC_functional_prog_Z <> OP var
+def 1839:1842 HMAC_FUN HMAC
+R1864:1867 Coq.Init.Datatypes <> list ind
+R1869:1869 Coq.Numbers.BinNums <> Z ind
+R1888:1890 Coq.Lists.List <> map def
+R1903:1907 HMAC_functional_prog_Z HMAC_FUN mkKey def
+R1909:1916 HMAC_functional_prog_Z <> password var
+R1892:1900 Integers Byte repr def
+R1924:1928 HMAC_functional_prog_Z HMAC_FUN OUTER def
+R1938:1942 HMAC_functional_prog_Z HMAC_FUN INNER def
+R1951:1953 HMAC_functional_prog_Z <> txt var
+R1947:1949 HMAC_functional_prog_Z <> key var
+R1944:1945 HMAC_functional_prog_Z <> IP var
+R1933:1935 HMAC_functional_prog_Z <> key var
+R1930:1931 HMAC_functional_prog_Z <> OP var
+R1962:1969 HMAC_functional_prog_Z <> <> mod
+R1988:1993 SHA256 <> <> lib
+R2011:2025 functional_prog <> <> lib
+R2047:2059 HMAC_functional_prog_Z <> <> mod
+mod 2036:2042 <> SHA256_
+def 2075:2083 SHA256_ BlockSize
+def 2108:2119 SHA256_ DigestLength
+def 2144:2147 SHA256_ Hash
+R2161:2164 Coq.Init.Datatypes <> list ind
+R2166:2166 Coq.Numbers.BinNums <> Z ind
+R2151:2154 Coq.Init.Datatypes <> list ind
+R2156:2156 Coq.Numbers.BinNums <> Z ind
+R2171:2178 functional_prog <> SHA_256' def
+R2185:2191 HMAC_functional_prog_Z <> <> mod
+R2217:2224 HMAC_functional_prog_Z <> <> modtype
+R2226:2232 HMAC_functional_prog_Z <> <> modtype
+mod 2202:2212 <> HMAC_SHA256
+def 2247:2250 <> Ipad
+def 2296:2299 <> Opad
+def 2345:2351 <> HMAC256
+R2356:2371 HMAC_functional_prog_Z HMAC_SHA256 HMAC def
+R2378:2381 HMAC_functional_prog_Z <> Opad def
+R2373:2376 HMAC_functional_prog_Z <> Ipad def
+def 2396:2405 <> HMACString
+R2419:2424 Coq.Strings.String <> string ind
+R2428:2431 Coq.Init.Datatypes <> list ind
+R2433:2433 Coq.Numbers.BinNums <> Z ind
+R2440:2446 HMAC_functional_prog_Z <> HMAC256 def
+R2464:2471 SHA256 <> str_to_Z def
+R2473:2478 HMAC_functional_prog_Z <> passwd var
+R2449:2456 SHA256 <> str_to_Z def
+R2458:2460 HMAC_functional_prog_Z <> txt var
+def 2494:2500 <> HMACHex
+R2517:2522 Coq.Strings.String <> string ind
+R2526:2529 Coq.Init.Datatypes <> list ind
+R2531:2531 Coq.Numbers.BinNums <> Z ind
+R2539:2545 HMAC_functional_prog_Z <> HMAC256 def
+R2574:2591 functional_prog <> hexstring_to_Zlist def
+R2593:2600 HMAC_functional_prog_Z <> password var
+R2548:2565 functional_prog <> hexstring_to_Zlist def
+R2567:2570 HMAC_functional_prog_Z <> text var
+def 2616:2620 <> check
+R2712:2714 Coq.Init.Logic <> :type_scope:x_'='_x not
+R2649:2656 functional_prog <> listZ_eq def
+R2686:2703 functional_prog <> hexstring_to_Zlist def
+R2705:2710 HMAC_functional_prog_Z <> digest var
+R2659:2668 HMAC_functional_prog_Z <> HMACString def
+R2675:2682 HMAC_functional_prog_Z <> password var
+R2670:2673 HMAC_functional_prog_Z <> text var
+R2715:2718 Coq.Init.Datatypes <> true constr
+R2833:2837 HMAC_functional_prog_Z <> check def
+prf 2961:2977 <> RFC4231_exaple4_2
+R2983:2987 HMAC_functional_prog_Z <> check def
+def 3144:3151 <> checkHex
+R3240:3242 Coq.Init.Logic <> :type_scope:x_'='_x not
+R3180:3187 functional_prog <> listZ_eq def
+R3214:3231 functional_prog <> hexstring_to_Zlist def
+R3233:3238 HMAC_functional_prog_Z <> digest var
+R3190:3196 HMAC_functional_prog_Z <> HMACHex def
+R3203:3210 HMAC_functional_prog_Z <> password var
+R3198:3201 HMAC_functional_prog_Z <> text var
+R3243:3246 Coq.Init.Datatypes <> true constr
+prf 3256:3276 <> RFC6868_example4_2hex
+R3282:3289 HMAC_functional_prog_Z <> checkHex def
+prf 3489:3509 <> RFC6868_example4_5hex
+R3515:3522 HMAC_functional_prog_Z <> checkHex def
+prf 4019:4042 <> RFC6868_exampleAUTH256_2
+R4048:4055 HMAC_functional_prog_Z <> checkHex def
