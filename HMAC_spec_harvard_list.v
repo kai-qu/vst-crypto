@@ -20,6 +20,10 @@ Notation "f @ g" := (compose f g) (at level 80, right associativity).
 Definition splitList {A : Type} (h : nat) (t : nat) (l : list A) : (list A * list A) :=
   (firstn h l, skipn t l).
 
+Definition concat {A : Type} (l : list (list A)) : list A :=
+  flat_map id l.
+
+
 (*
 Definition mkArg (key:list byte) (pad:byte): list byte :=
        (map (fun p => Byte.xor (fst p) (snd p))
@@ -193,6 +197,98 @@ Admitted.
 
 (* ------- *)
 
+Section Example. 
+
+ Definition k:Blist := concat (list_repeat 64 [true; true; false; false; true; false; true; true]).
+ Definition K:list Z := list_repeat 64 211. 
+
+ Lemma conv : convertByteBits [true; true; false; false; true; false; true; true] 211.
+  eexists; eexists; eexists; eexists; eexists; eexists; eexists; eexists.
+  split. reflexivity. simpl. reflexivity.
+ Qed.
+ Lemma kKcorrect: bytes_bits_lists k K.
+   unfold K, k. simpl.
+   repeat constructor; try apply conv.
+  Qed. 
+
+
+ Definition ip:Blist := concat (list_repeat 64 [false; true; false; false; true; false; true; true]).
+ Definition IP:byte := Byte.repr 210.
+ Transparent Byte.repr. 
+
+ Lemma ip_conv : convertByteBits [false; true; false; false; true; false; true; true] 210.
+  eexists; eexists; eexists; eexists; eexists; eexists; eexists; eexists.
+  split. reflexivity. simpl. reflexivity.
+ Qed.
+ Lemma ipcorrect: bytes_bits_lists ip (byte_to_64list IP).
+   unfold ip, IP. simpl. unfold byte_to_64list, HMAC_SHA256.sixtyfour. simpl.
+   repeat constructor; try apply ip_conv.
+  Qed. 
+
+Lemma ONE: convertByteBits [true; false; false; false; false; false; false; false] 1.
+  repeat eexists. Qed.
+
+Lemma inner_fst_equiv_example : exists k (ip  : Blist) K (IP : byte), 
+                          ((length K) * 8)%nat = (c + p)%nat /\
+                          Zlength K = Z.of_nat SHA256_.BlockSize /\
+                          (* TODO: first implies this *)
+                          bytes_bits_lists k K /\
+                          bytes_bits_lists ip (byte_to_64list IP) /\
+                          bytes_bits_lists (BLxor k ip) (map Byte.unsigned
+       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) .
+
+Proof.
+  exists k, ip, K, IP. repeat split.
+(*    assert (length K = 64%nat). unfold K. rewrite length_list_repeat. reflexivity.
+    rewrite Zlength_correct, H. split. reflexivity.
+   split.*)
+   apply kKcorrect. apply ipcorrect. 
+  unfold k, K, ip, IP. simpl. unfold BLxor. simpl.
+  repeat constructor; apply ONE.
+Qed.
+
+Lemma inner_fst_equiv' : exists (ip  : Blist)(IP : byte), 
+                          bytes_bits_lists ip (byte_to_64list IP) /\
+                      forall (k : Blist) (K : list Z),
+                          ((length K) * 8)%nat = (c + p)%nat ->
+                          Zlength K = Z.of_nat SHA256_.BlockSize ->
+                          (* TODO: first implies this *)
+                          bytes_bits_lists k K ->
+                          bytes_bits_lists (BLxor k ip) (map Byte.unsigned
+       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) .
+Proof.
+  exists ip, IP. repeat split.
+    apply ipcorrect.
+  intros. 
+  unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkArgZ, HMAC_SHA256.mkKey.
+   simpl. rewrite H0. simpl. unfold HMAC_SHA256.zeroPad, HMAC_SHA256.sixtyfour.
+   assert (KL: length K0 = 64%nat). admit.
+   rewrite KL.  simpl.  rewrite app_nil_r. unfold BLxor.
+
+Admitted.
+   
+(*
+Lemma  
+        (map g y) = byte::bytes -> exists b1 .. b8, tail (map f x) = [b1,....,b8] ++ tail,
+                 
+       -> bytes_bits_lists (map f x) (map g y).
+
+
+
+Zlength_correct in H0. simpl in H0.  rewrite H0.  simpl. repeat constructor; apply ONE.
+(*    assert (length K = 64%nat). unfold K. rewrite length_list_repeat. reflexivity.
+    rewrite Zlength_correct, H. split. reflexivity.
+   split.*)
+   apply kKcorrect. apply ipcorrect. 
+  unfold k, K, ip, IP. simpl. unfold BLxor. simpl.
+  repeat constructor; apply ONE.
+Qed.
+*)
+
+End Example.
+
+(* Require Import HMAC_lemmas. *)
+
 Lemma inner_fst_equiv : forall (k ip bit_xor : Blist)
                                (K byte_xor : list Z) (IP : byte),
                           ((length k) * 8)%nat = (c + p)%nat ->
@@ -221,7 +317,27 @@ Proof.
   SearchAbout Zlength.
   rewrite -> Zlength_correct in k_bytelen.
   inversion k_bytelen.
-  unfold Byte.xor. SearchAbout Byte.xor. SearchAbout Z.lxor.
+  unfold Byte.xor. SearchAbout Byte.xor.
+  SearchAbout Z.lxor.
+  Print Z.testbit.
+  (* Z.lxor: try xorb lemma? TODO *)
+  (* unfold Z.lxor. *)
+
+
+  (* Computational tests *)
+
+Definition byte_xor (K : list Z) (IP : byte) :=
+  map Byte.unsigned
+       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP).
+
+Print Byte.int.
+Transparent Byte.repr.
+Eval compute in byte_xor [1;2;3;4] (Byte.repr 54).
+Eval compute in BLxor [true; true; false] [false; true; false].
+
+  
+(* TODO: HMAC_lemmas has lemmas about Byte.unsigned, Byte.repr, mkArg.
+can admit for now *)
 
 (* might need a lemma about BLxor and Byte.xor *)
 
@@ -268,14 +384,11 @@ Admitted.
 should be slightly easier -- 
 the SHA here is entirely made of wrapped versions of our functions
 
+
  *)
 
-Definition concat {A : Type} (l : list (list A)) : list A :=
-  flat_map id l.
-
-SearchAbout int.
-
 Check sha_h.                    (* Blist -> Blist -> Blist *)
+(* registers -> block -> registers *)
 (* see Round and rnd_function in SHA256 *)
 Check sha_iv.
 Print sha_padding_lemmas.generate_and_pad'.
@@ -289,6 +402,7 @@ Check sha_padding_lemmas.pad.
 - define sha_splitandpad
 - figure out how to unfold the proofs involving SHA & which lemma to start with
 - figure out how they would compose
+   - e.g. if you admit one of the lemmas, how would you use it in the main proof?
 - 
 
  *)
@@ -303,6 +417,10 @@ Proof.
   unfold concat.
   unfold pad.
 (* TODO: define sha_splitandpad *)
+
+(* sha_splitandpad should be defined as split . Bb . pad . bB 
+   or Bb . split . pad . bB
+ *)
 
 Admitted.  
 
