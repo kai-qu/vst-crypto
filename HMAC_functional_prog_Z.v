@@ -39,29 +39,37 @@ Definition mkKey (l:list Z) : list Z :=
 
 (* TODO: turns both Zs into bytes, then back into Zs.
 can I eliminate byte.xor? *)
+(*
 Definition mkArg (key:list byte) (pad:Z): list byte := 
        (map (fun p => Byte.xor (fst p) (snd p))
           (combine key (map Byte.repr (sixtyfour pad)))).
 
 Definition mkArgZ key (pad:Z): list Z := 
      map Byte.unsigned (mkArg key pad).
+*)
+
+Definition mkArg (key:list Z) (pad:Z): list Z := 
+       (map (fun p => Z.lxor (fst p) (snd p))
+          (combine key (sixtyfour pad))).
+
 (*
 Definition Ipad := P.Ipad.  
 Definition Opad := P.Opad.
 *)
 (*innerArg to be applied to message, (map Byte.repr (mkKey password)))*)
 Definition innerArg IP (text: list Z) key : list Z :=
-  (mkArgZ key IP) ++ text.
+  (mkArg key IP) ++ text.
 
 Definition INNER IP k text := HF.Hash (innerArg IP text k).
 
 Definition outerArg OP (innerRes: list Z) key: list Z :=
-  (mkArgZ key OP) ++ innerRes.
+  (mkArg key OP) ++ innerRes.
 
 Definition OUTER OP k innerRes := HF.Hash (outerArg OP innerRes k).
 
 Definition HMAC IP OP txt password: list Z := 
-  let key := map Byte.repr (mkKey password) in
+  (* let key := map Byte.repr (mkKey password) in *)
+  let key := mkKey password in
   OUTER OP key (INNER IP key txt).
 
 End HMAC_FUN.

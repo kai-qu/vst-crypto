@@ -236,8 +236,8 @@ Lemma inner_fst_equiv_example : exists k (ip  : Blist) K (IP : Z),
                           (* TODO: first implies this *)
                           bytes_bits_lists k K /\
                           bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) /\
-                          bytes_bits_lists (BLxor k ip) (map Byte.unsigned
-       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) .
+                          bytes_bits_lists (BLxor k ip) 
+                                           ((HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) IP)).
 
 Proof.
   exists k, ip, K, IP. repeat split.
@@ -255,16 +255,17 @@ Lemma xor_correspondence :
          (byte0 byte1 : Z),
     convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte0 ->
     convertByteBits [b8; b9; b10; b11; b12; b13; b14; b15] byte1 ->
+
     convertByteBits
       [xorb b0 b8; xorb b1 b9; xorb b2 b10; xorb b3 b11; 
        xorb b4 b12; xorb b5 b13; xorb b6 b14; xorb b7 b15]
-      (Byte.Z_mod_modulus
-         (Z.lxor (Byte.Z_mod_modulus byte0) (Byte.Z_mod_modulus byte1))).
+      (Z.lxor byte0 byte1).
 Proof.
   intros.
   generalize dependent H. generalize dependent H0. intros H0 H1.
   unfold convertByteBits. unfold asZ.
-  Print Byte.Z_mod_modulus. Print Z.lxor.
+  (* simpl. *)
+  Print Z.lxor.
   SearchAbout Z.lxor.
   (* need to exhibit b16 ... b23 *)
    
@@ -276,9 +277,8 @@ Lemma inner_general_map : forall (ip : Blist) (IP_list : list Z) (k : Blist) (K 
                             bytes_bits_lists ip IP_list ->
                             bytes_bits_lists k K ->
      bytes_bits_lists (BLxor k ip) 
-     (map Byte.unsigned
-        (map (fun p0 : byte * byte => Byte.xor (fst p0) (snd p0))
-           (combine (map Byte.repr K) (map Byte.repr IP_list)))).
+                      (map (fun p0 : Z * Z => Z.lxor (fst p0) (snd p0))
+                           (combine K IP_list)).
 Proof.
   intros ip IP_list k K ip_eq k_eq.
   unfold BLxor. simpl.
@@ -343,6 +343,7 @@ Print HMAC_SHA256.mkArg.
 Admitted.
 *)
 
+
 Lemma inner_fst_equiv_ipZ : exists (ip  : Blist) (IP : Z), 
                           bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) /\
                       forall (k : Blist) (K : list Z),
@@ -351,13 +352,12 @@ Lemma inner_fst_equiv_ipZ : exists (ip  : Blist) (IP : Z),
                           (* TODO: first implies this *)
                           bytes_bits_lists k K ->
                           bytes_bits_lists (BLxor k ip)
-                                           (map Byte.unsigned
-       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) .
+       (HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) IP).
 Proof.
   exists ip, IP. repeat split.
   apply ipcorrect.
   intros. 
-  unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkArgZ, HMAC_SHA256.mkKey.
+  unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkKey.
   Opaque HMAC_SHA256.sixtyfour.
    simpl. rewrite H0. simpl. unfold HMAC_SHA256.zeroPad.
    assert (KL: length K0 = 64%nat). admit.
@@ -366,7 +366,6 @@ Proof.
 
    - apply ipcorrect.
    - apply H1.
-
 Qed.
 
   
@@ -434,6 +433,7 @@ End Example.
 
 (* Require Import HMAC_lemmas. *)
 
+(*
 Lemma inner_fst_equiv : forall (k ip bit_xor : Blist)
                                (K byte_xor : list Z) (IP : byte),
                           ((length K) * 8)%nat = (c + p)%nat ->
@@ -468,9 +468,12 @@ Proof.
   (* Z.lxor: try xorb lemma? TODO *)
   (* unfold Z.lxor. *)
 
+Admitted.
+*)
 
   (* Computational tests *)
 
+(*
 Definition byte_xor (K : list Z) (IP : byte) :=
   map Byte.unsigned
        (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP).
@@ -480,13 +483,12 @@ Transparent Byte.repr.
 Eval compute in byte_xor [1;2;3;4] (Byte.repr 54).
 Eval compute in BLxor [true; true; false] [false; true; false].
 
+*)
   
 (* TODO: HMAC_lemmas has lemmas about Byte.unsigned, Byte.repr, mkArg.
 can admit for now *)
 
 (* might need a lemma about BLxor and Byte.xor *)
-
-Admitted.
   
 (*  
   (* --- *)
@@ -630,7 +632,7 @@ Admitted.
 (* ---------- *)
 
 Theorem HMAC_spec_equiv : forall
-                            (K M H : list Z) (OP IP : byte)
+                            (K M H : list Z) (OP IP : Z)
                             (k m h : Blist) (op ip : Blist),
   ((length k) * 8)%nat = (c + p)%nat ->
   Zlength K = Z.of_nat SHA256_.BlockSize ->
@@ -638,8 +640,8 @@ Theorem HMAC_spec_equiv : forall
   (* TODO: might need more hypotheses about lengths *)
   bytes_bits_lists k K ->
   bytes_bits_lists m M ->
-  bytes_bits_lists op (byte_to_64list OP) ->
-  bytes_bits_lists ip (byte_to_64list IP) ->
+  bytes_bits_lists op (HMAC_SHA256.sixtyfour OP) ->
+  bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) ->
   HMAC c p sha_h sha_iv sha_splitandpad op ip k m = h ->
   HMAC_SHA256.HMAC IP OP M K = H ->
   bytes_bits_lists h H.
