@@ -112,6 +112,32 @@ End HMAC.
 
 (* --------------------------------- *)
 
+(* Lemma 1: ++ equivalence on list *)
+(* Lemma 2: xor equivalence on list *)
+(* Lemma 3: SHA (iterated hash) equivalence on list *)
+
+Lemma concat_equiv :
+  forall (l1 : list Z) (l2 : Blist) (m1 : list Z) (m2 : Blist),
+    bytes_bits_lists l1 l2
+    -> bytes_bits_lists m1 m2
+    -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2).
+(* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
+Proof.
+  intros l1 l2 m1 m2.
+  intros fst_eq snd_eq.
+  generalize dependent m1. generalize dependent m2.
+  induction fst_eq; intros.
+  - repeat rewrite app_nil_l.
+    apply snd_eq.
+  - simpl.
+    apply eq_cons.
+    + apply IHfst_eq.
+      apply snd_eq.
+    + apply H.
+Qed.   
+
+(* ----------------------------------- *)
+
 Module Equiv.
 
 Check HMAC.
@@ -195,8 +221,9 @@ Section Example.
  Definition K:list Z := list_repeat 64 211. 
 
  Lemma conv : convertByteBits [true; true; false; false; true; false; true; true] 211.
-  eexists; eexists; eexists; eexists; eexists; eexists; eexists; eexists.
-  split. reflexivity. simpl. reflexivity.
+   repeat eexists.
+  (* eexists; eexists; eexists; eexists; eexists; eexists; eexists; eexists. *)
+  (* split. reflexivity. simpl. reflexivity. *)
  Qed.
  Lemma kKcorrect: bytes_bits_lists k K.
    unfold K, k. simpl.
@@ -209,8 +236,7 @@ Section Example.
  Transparent Byte.repr. 
 
  Lemma ip_conv : convertByteBits [false; true; false; false; true; false; true; true] 210.
-  eexists; eexists; eexists; eexists; eexists; eexists; eexists; eexists.
-  split. reflexivity. simpl. reflexivity.
+   repeat eexists.
  Qed.
  Lemma ipcorrect: bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP).
    unfold ip, IP. simpl. unfold byte_to_64list, HMAC_SHA256.sixtyfour. simpl.
@@ -251,7 +277,27 @@ Proof.
   intros.
   generalize dependent H. generalize dependent H0. intros H0 H1.
   unfold convertByteBits. unfold asZ.
-  (* TODO: Maybe this should be computational *)
+
+  do 8 eexists. split. reflexivity.
+  unfold convertByteBits in *.
+
+  destruct H0 as [ ? [ ? [ ? [ ? [ ? [ ? [ ? [ ? ? ] ] ] ]] ]] ].  (* nested 8 *)
+  destruct H.
+  symmetry in H.
+  inversion H. clear H.
+  subst.
+
+  destruct H1 as [ ? [ ? [ ? [ ? [ ? [ ? [ ? [ ? ? ] ] ] ]] ]] ].  (* nested 8 *)
+  destruct H.
+  symmetry in H.
+  inversion H. clear H.
+  subst.
+
+  unfold asZ.
+
+  (* destruct b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15; reflexivity. *)
+  (* TODO *)
+  
   (* simpl. *)
   Print Z.lxor. Print Pos.lxor.
   SearchAbout Z.lxor.
@@ -480,6 +526,9 @@ Proof.
 
 Admitted.  
 
+Check hash_words.
+Check hash_words_padded.
+
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                     (* assumptions *)
                     bytes_bits_lists bits bytes ->
@@ -567,9 +616,19 @@ Proof.
 
   induction msgs_eq.
 
-  (* need to prove that m = [] -> HMAC _ ... _ = [] *)
+  (*
+TODO: first prove case of empty message!
+
+hash(K xor OP ++ hash(K xor IP ++ M))
+hash(K xor OP ++ hash(K xor IP ++ []))
+hash(K xor OP ++ hash(K xor IP))
+
+to prove: need xor relation (done), ++ relation on lists (not done), and hash relation (working on)
+
+*)
   -
     admit.
+    Eval compute in HMAC_SHA256.HMAC 54 92 [] 100.
 
   -
     unfold HMAC.

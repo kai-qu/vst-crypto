@@ -185,6 +185,8 @@ Proof. intros.
  rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
 Defined.
 
+Check hash_blocks_equation.
+
 Transparent hash_blocks.
 Transparent hash_block.
 
