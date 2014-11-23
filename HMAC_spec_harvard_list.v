@@ -110,33 +110,7 @@ Check HMAC.
 
 End HMAC.
 
-(* --------------------------------- *)
-
-(* Lemma 1: ++ equivalence on list *)
-(* Lemma 2: xor equivalence on list *)
-(* Lemma 3: SHA (iterated hash) equivalence on list *)
-
-Lemma concat_equiv :
-  forall (l1 : list Z) (l2 : Blist) (m1 : list Z) (m2 : Blist),
-    bytes_bits_lists l1 l2
-    -> bytes_bits_lists m1 m2
-    -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2).
-(* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
-Proof.
-  intros l1 l2 m1 m2.
-  intros fst_eq snd_eq.
-  generalize dependent m1. generalize dependent m2.
-  induction fst_eq; intros.
-  - repeat rewrite app_nil_l.
-    apply snd_eq.
-  - simpl.
-    apply eq_cons.
-    + apply IHfst_eq.
-      apply snd_eq.
-    + apply H.
-Qed.   
-
-(* ----------------------------------- *)
+(* ----------------------------------- DEFINITIONS *)
 
 Module Equiv.
 
@@ -190,7 +164,33 @@ Definition byte_to_64list (byte : byte) : list Z :=
 Definition Z_to_64list (num : Z) : list Z :=
    HMAC_SHA256.sixtyfour num.
 
-(* -------- *)
+(* -------------------------------------------------------- LEMMAS *)
+
+(* Lemma 1: ++ equivalence on list *)
+(* Lemma 2: xor equivalence on list *)
+(* Lemma 3: SHA (iterated hash) equivalence on list *)
+
+Lemma concat_equiv :
+  forall (l1 : Blist) (l2 : list Z) (m1 : Blist) (m2 : list Z),
+    bytes_bits_lists l1 l2
+    -> bytes_bits_lists m1 m2
+    -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2).
+(* bytes_bits_lists l1 l2 -> bytes_bits_lists m1 m2 -> bytes_bits_lists (l1 ++ m1) (l2 ++ m2) *)
+Proof.
+  intros l1 l2 m1 m2.
+  intros fst_eq snd_eq.
+  generalize dependent m1. generalize dependent m2.
+  induction fst_eq; intros.
+  - repeat rewrite app_nil_l.
+    apply snd_eq.
+  - simpl.
+    apply eq_cons.
+    + apply IHfst_eq.
+      apply snd_eq.
+    + apply H.
+Qed.   
+
+(* --------------------------------- *)
 
 SearchAbout length.
 Check splitList.
@@ -213,6 +213,8 @@ Proof.
 Admitted.
 
 (* ------- *)
+
+(* Lemma 2 *)
 
 (* Prove that the inner xor lemma is true on at least one example *)
 Section Example. 
@@ -377,10 +379,9 @@ Print HMAC_SHA256.mkArg.
 Admitted.
 *)
 
-
-Lemma inner_fst_equiv_ipZ : exists (ip  : Blist) (IP : Z), 
-                          bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) /\
-                      forall (k : Blist) (K : list Z),
+Lemma inner_fst_equiv_ipZ : forall (ip  : Blist) (IP : Z)
+                                           (k : Blist) (K : list Z),
+                          bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) ->
                           ((length K) * 8)%nat = (c + p)%nat ->
                           Zlength K = Z.of_nat SHA256_.BlockSize ->
                           (* TODO: first implies this *)
@@ -388,18 +389,19 @@ Lemma inner_fst_equiv_ipZ : exists (ip  : Blist) (IP : Z),
                           bytes_bits_lists (BLxor k ip)
        (HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) IP).
 Proof.
-  exists ip, IP. repeat split.
-  apply ipcorrect.
-  intros. 
+  (* intros ip IP k K. intros ip_equiv len_k zlen_k k_equiv.   *)
+  (* apply ipcorrect. *)
+  (* Check ipcorrect. *)
+  intros.
   unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkKey.
   Opaque HMAC_SHA256.sixtyfour.
-   simpl. rewrite H0. simpl. unfold HMAC_SHA256.zeroPad.
+   simpl. rewrite H1. simpl. unfold HMAC_SHA256.zeroPad.
    assert (KL: length K0 = 64%nat). admit.
    rewrite KL.  simpl.  rewrite app_nil_r.
    apply inner_general_map.
 
-   - apply ipcorrect.
-   - apply H1.
+   - apply H.
+   - apply H2.
 Qed.
 
 
@@ -409,60 +411,7 @@ Eval compute in Byte.xor (Byte.repr 50) (Byte.repr 5).
 
 End Example.
 
-(* Require Import HMAC_lemmas. *)
-(* TODO *)
-
-(*
-Lemma inner_fst_equiv : forall (k ip bit_xor : Blist)
-                               (K byte_xor : list Z) (IP : byte),
-                          ((length K) * 8)%nat = (c + p)%nat ->
-                          Zlength K = Z.of_nat SHA256_.BlockSize ->
-                          (* TODO: first implies this *)
-                          bytes_bits_lists k K ->
-                          bytes_bits_lists ip (byte_to_64list IP) ->
-                          bit_xor = BLxor k ip ->
-                          byte_xor = (map Byte.unsigned
-       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) ->
-                          bytes_bits_lists bit_xor byte_xor.
-
-Proof.
-  intros k ip bit_xor K byte_xor IP.
-  intros k_bitlen k_bytelen k_eq ip_conv_eq bit_res byte_res.
-  subst.
-
-  unfold BLxor.
-
-  unfold HMAC_SHA256.mkArg.
-  unfold HMAC_SHA256.mkKey.
-
-  rewrite -> k_bytelen. simpl.
-  
-  unfold HMAC_SHA256.zeroPad.
-  SearchAbout Zlength.
-  rewrite -> Zlength_correct in k_bytelen.
-  inversion k_bytelen.
-  unfold Byte.xor. SearchAbout Byte.xor.
-  SearchAbout Z.lxor.
-  Print Z.testbit.
-  (* Z.lxor: try xorb lemma? TODO *)
-  (* unfold Z.lxor. *)
-
-Admitted.
-*)
-
-(* TODO: HMAC_lemmas has lemmas about Byte.unsigned, Byte.repr, mkArg.
-can admit for now *)
-
-(* might need a lemma about BLxor and Byte.xor *)
-  
-(*  
-  (* --- *)
-  
-  induction k_eq.
-
-  - 
-    simpl. 
-*)
+Check inner_fst_equiv_ipZ.
 
 
 (* TODO: bytes-bits stuff on SHA *)
@@ -627,8 +576,32 @@ to prove: need xor relation (done), ++ relation on lists (not done), and hash re
 
 *)
   -
-    admit.
-    Eval compute in HMAC_SHA256.HMAC 54 92 [] 100.
+    (* code repeated between cases here *)
+    unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
+    
+    unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
+
+    unfold HMAC_SHA256.outerArg. unfold HMAC_SHA256.innerArg. (* unfold HMAC_SHA256.mkArg. *)
+    
+    simpl.
+
+    rewrite -> app_nil_r.
+
+    Check SHA_equiv_pad.
+    apply SHA_equiv_pad.
+    
+    assert (splitandpad_nil: sha_splitandpad [] = []). admit. (* TODO *)
+    rewrite -> splitandpad_nil.
+    simpl.
+
+    apply concat_equiv.
+    apply inner_fst_equiv_ipZ; try assumption.
+    * admit.
+    * admit.                    (* hash equiv *)
+    * admit.
+    * admit.
+
+    (* Eval compute in HMAC_SHA256.HMAC 54 92 []. *)
 
   -
     unfold HMAC.
@@ -650,10 +623,6 @@ to prove: need xor relation (done), ++ relation on lists (not done), and hash re
     Print split_append_id.
     rewrite -> split_append_id.
 
-    (* pose inner_fst_equiv as inner_fst_equiv. *)
-    (* apply inner_fst_equiv with (k := k) (ip := ip) (K := K) (IP := IP); auto. *)
-    (* TODO: pose proof (SHA_equiv  ). *)
-    
 
     
 (* HMAC IP OP M K =
