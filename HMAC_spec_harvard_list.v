@@ -9,6 +9,7 @@ Require Import Integers.
 Require Import Coqlib.
 Require Import sha_padding_lemmas.
 Require Import functional_prog.
+Require Import hmac_common_lemmas.
 
 Require Import List. Import ListNotations.
 
@@ -379,19 +380,19 @@ Print HMAC_SHA256.mkArg.
 Admitted.
 *)
 
-Lemma inner_fst_equiv_ipZ : forall (ip  : Blist) (IP : Z)
+Lemma xor_equiv_Z : forall (xpad  : Blist) (XPAD : Z)
                                            (k : Blist) (K : list Z),
-                          bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) ->
+                          bytes_bits_lists xpad (HMAC_SHA256.sixtyfour XPAD) ->
                           ((length K) * 8)%nat = (c + p)%nat ->
                           Zlength K = Z.of_nat SHA256_.BlockSize ->
                           (* TODO: first implies this *)
                           bytes_bits_lists k K ->
-                          bytes_bits_lists (BLxor k ip)
-       (HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) IP).
+                          bytes_bits_lists (BLxor k xpad)
+       (HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) XPAD).
 Proof.
-  (* intros ip IP k K. intros ip_equiv len_k zlen_k k_equiv.   *)
-  (* apply ipcorrect. *)
-  (* Check ipcorrect. *)
+  (* intros xpad XPAD k K. intros xpad_equiv len_k zlen_k k_equiv.   *)
+  (* apply xpadcorrect. *)
+  (* Check xpadcorrect. *)
   intros.
   unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkKey.
   Opaque HMAC_SHA256.sixtyfour.
@@ -411,8 +412,8 @@ Eval compute in Byte.xor (Byte.repr 50) (Byte.repr 5).
 
 End Example.
 
-Check inner_fst_equiv_ipZ.
-
+(* ------------------------------------------------------ *)
+(* Lemma 3 *)
 
 (* TODO: bytes-bits stuff on SHA *)
 (* 
@@ -477,6 +478,7 @@ Admitted.
 
 Check hash_words.
 Check hash_words_padded.
+
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                     (* assumptions *)
@@ -595,7 +597,7 @@ to prove: need xor relation (done), ++ relation on lists (not done), and hash re
     simpl.
 
     apply concat_equiv.
-    apply inner_fst_equiv_ipZ; try assumption.
+    apply xor_equiv_Z; try assumption.
     * admit.
     * admit.                    (* hash equiv *)
     * admit.
@@ -623,8 +625,10 @@ to prove: need xor relation (done), ++ relation on lists (not done), and hash re
     Print split_append_id.
     rewrite -> split_append_id.
 
-
     
+Abort.
+
+
 (* HMAC IP OP M K =
     H ( K (+) OP      ++
         H ((K (+) IP) ++ M)
@@ -643,5 +647,5 @@ to prove: need xor relation (done), ++ relation on lists (not done), and hash re
     unfold sha_padding_lemmas.generate_and_pad' in *.
      *)
 
-Abort.
+
 
