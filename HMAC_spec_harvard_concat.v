@@ -578,7 +578,7 @@ Admitted.
 Theorem HMAC_spec_equiv : forall
                             (K M H : list Z) (OP IP : Z)
                             (k m h : Blist) (op ip : Blist),
-  ((length k) * 8)%nat = (c + p)%nat ->
+  ((length K) * 8)%nat = (c + p)%nat ->
   Zlength K = Z.of_nat SHA256_.BlockSize ->
 (* TODO: first implies this *)
   (* TODO: might need more hypotheses about lengths *)
@@ -633,17 +633,11 @@ to prove: need xor relation (done), ++ relation on lists (not done), and hash re
 
     apply concat_equiv.
     apply xor_equiv_Z; try assumption.
-    * admit.
-    *
-      (* OTHER hash equiv *)
-      Print hash_words.
-      Print hash_words_padded.
-      simpl.
-    (* sha_h sha_iv (BLxor k ip) *)
-      admit.
+    * apply SHA_equiv_pad.
+      rewrite -> app_nil_r.
+      apply xor_equiv_Z; try assumption.
     * admit.
     * admit.
-    
 
     (* Eval compute in HMAC_SHA256.HMAC 54 92 []. *)
 
