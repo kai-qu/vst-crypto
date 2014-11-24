@@ -29,6 +29,36 @@ Definition concat {A : Type} (l : list (list A)) : list A :=
 Definition BLxor (xs : Blist) (ys : Blist) :=
   map (fun p => xorb (fst p) (snd p)) (combine xs ys).
 
+Print fold_left.
+(*
+Function hash_blocks (r: registers) (msg: list int) {measure length msg} : registers :=
+  match msg with
+  | nil => r
+  | _ => hash_blocks (hash_block r (firstn 16 msg)) (skipn 16 msg)
+  end.
+Proof. intros.
+ destruct (lt_dec (length msg) 16).
+ rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
+ rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
+Defined.
+*)
+(* block size 512, possibly use take 512 l instead, though it might be harder to prove things about *)
+Function hash_blocks_bits (hash_block_bit : Blist -> Blist -> Blist) (r: Blist)
+         (msg: Blist) {measure length msg} : Blist :=
+  match msg with
+  | nil => r
+  | _ => hash_blocks_bits hash_block_bit (hash_block_bit r (firstn 512 msg)) (skipn 512 msg)
+  end.
+Proof. intros.
+(*
+ destruct (lt_dec (length msg) 512).
+ rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
+ rewrite skipn_length. simpl; omega. rewrite <- teq; omega. *)
+Admitted.
+(* Defined. *)
+(* TODO *)
+                                                                                    
+
 Section HMAC.
 
 (* b = block size
@@ -42,16 +72,21 @@ Section HMAC.
   (* The initialization vector is part of the spec of the hash function. *)
   Variable iv : Blist.
   (* The iteration of the compression function gives a keyed hash function on lists of words. *)
-  Definition h_star k (m : list (Blist)) :=
-    fold_left h m k.
+  Print fold_left.
+  Locate fold_left.
+  
+  Definition h_star k (m : Blist) :=
+    hash_blocks_bits h m k.
   (* The composition of the keyed hash function with the IV gives a hash function on lists of words. *)
   Definition hash_words := h_star iv.
 
-  Check hash_words.
+  (* Check hash_words. *)
   Check h_star.
 
   (* NOTE: this is the new design without fpad TODO *)
-  Variable splitAndPad : Blist -> list (Blist).
+  (* NOTE: this is the new design with concat and with two hash_words_padded *)
+  (* Variable splitAndPad : Blist -> list (Blist). *)
+  Variable splitAndPad : Blist -> Blist.
 
   Definition hash_words_padded : Blist -> Blist :=
     hash_words @ splitAndPad.
@@ -87,7 +122,7 @@ Check hash_words.               (* list Blist -> Blist *)
   (* Concatenate (K xor opad) and (K xor ipad) *)
   Definition GHMAC_2K (k : Blist) m :=
     let (k_Out, k_In) := splitList b b k in (* concat earlier, then split *)
-      let h_in := (hash_words (k_In :: m)) in
+      let h_in := (hash_words_padded (k_In ++ m)) in
         hash_words_padded (k_Out ++ h_in).
 
   Definition HMAC_2K (k : Blist) (m : Blist) :=
@@ -138,7 +173,7 @@ Definition p:=(32 * 8)%nat.
 
 Parameter sha_iv : Blist.
 Parameter sha_h : Blist -> Blist -> Blist.
-Parameter sha_splitandpad : Blist -> list Blist.
+Parameter sha_splitandpad : Blist -> Blist.
 
 (* -------------- *)
 
@@ -462,7 +497,7 @@ Check sha_padding_lemmas.pad.
 Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
                             bytes_bits_lists bits bytes ->
                             bytes_bits_lists
-                              (concat (sha_splitandpad bits))
+                              (sha_splitandpad bits)
                               (sha_padding_lemmas.pad bytes).
 Proof.
   intros bits bytes inputs_eq.
@@ -605,6 +640,7 @@ to prove: need xor relation (done), ++ relation on lists (not done), and hash re
       Print hash_words_padded.
       simpl.
     (* sha_h sha_iv (BLxor k ip) *)
+      admit.
     * admit.
     * admit.
     
@@ -652,6 +688,4 @@ Abort.
     repeat rewrite <- sha_padding_lemmas.pad_compose_equal in *.
     unfold sha_padding_lemmas.generate_and_pad' in *.
      *)
-
-
 

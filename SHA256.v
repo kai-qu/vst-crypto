@@ -174,6 +174,7 @@ Print registers.                (* list int *)
 Definition hash_block (r: registers) (block: list int) : registers :=
       map2 Int.add r (Round r (nthi block) 63).
 
+(* 16 * 32 = 512 *)
 Function hash_blocks (r: registers) (msg: list int) {measure length msg} : registers :=
   match msg with
   | nil => r
