@@ -450,30 +450,6 @@ End Example.
 (* ------------------------------------------------------ *)
 (* Lemma 3 *)
 
-(* TODO: bytes-bits stuff on SHA *)
-(* 
-   bytes_bits_lists
-     (hash_words_padded sha_h sha_iv sha_splitandpad
-        (BLxor k op ++
-         hash_words sha_h sha_iv
-           (BLxor k ip
-            :: sha_splitandpad
-                 (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits))))
-
-     (SHA256_.Hash
-        (HMAC_SHA256.mkArgZ (map Byte.repr (HMAC_SHA256.mkKey K)) OP ++
-         SHA256_.Hash
-           (HMAC_SHA256.mkArgZ (map Byte.repr (HMAC_SHA256.mkKey K)) IP ++
-            byte :: bytes)))
-
-  BBL i1 I1 -> ... -> BBL in IN -> BBL (sha i1 ... in) (SHA I1 ... IN)
-
-should be slightly easier -- 
-the SHA here is entirely made of wrapped versions of our functions
-
-
- *)
-
 Check sha_h.                    (* Blist -> Blist -> Blist *)
 (* registers -> block -> registers *)
 (* see Round and rnd_function in SHA256 *)
@@ -490,8 +466,6 @@ Check sha_padding_lemmas.pad.
 - figure out how to unfold the proofs involving SHA & which lemma to start with
 - figure out how they would compose
    - e.g. if you admit one of the lemmas, how would you use it in the main proof?
-- 
-
  *)
 
 Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
@@ -536,21 +510,25 @@ Proof.
     unfold hash_words.
     unfold h_star.
 
-    unfold SHA256.hash_blocks.
-    (* unfold SHA256.hash_blocks_terminate. *)
-    (* simpl. *)
-(* TODO *)
-
+    Check SHA256.hash_blocks_equation.
+    
     pose proof splitandpad_equiv as splitandpad_equiv.
-    specialize (splitandpad_equiv bits bytes).
-    (* induction splitandpad_equiv. *)
+    specialize (splitandpad_equiv bits bytes input_eq).
+
+    induction splitandpad_equiv.
 
     +
+      rewrite -> SHA256.hash_blocks_equation.
+      rewrite -> hash_blocks_bits_equation.
+      (* TODO: intlist_to_Zlist & did I actually fully prove pad_compose equal? *)
+      (* TODO: SHA256.init_registers: difference *)
+      simpl.
+
 
       (* simpl. *)
+
 (* TODO: need sha_h, sha_splitandpad *)
 (* TODO: how to use this? *)
-
 
 Admitted.
 
@@ -602,16 +580,6 @@ Proof.
 
   induction msgs_eq.
 
-  (*
-TODO: first prove case of empty message!
-
-hash(K xor OP ++ hash(K xor IP ++ M))
-hash(K xor OP ++ hash(K xor IP ++ []))
-hash(K xor OP ++ hash(K xor IP))
-
-to prove: need xor relation (done), ++ relation on lists (not done), and hash relation (working on)
-
-*)
   -
     (* code repeated between cases here *)
     unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
