@@ -491,6 +491,44 @@ Check hash_words_padded.
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                     (* assumptions *)
+                        (* do equivalent inputs really guarantee equivalent outputs?
+this seems like an important central theorem.
+
+is it true for +, +b?
+do I have to prove 10 inner lemmas about various SHA ops?
+will a wrapper function around SHA work?
+need to write sha_h and sha_iv
+sha_h = B2b . rnd? . b2B
+  need to understand rnd0
+sha_iv = ?
+
+need to write b2B and prove things about lengths and ROUNDTRIPS
+need to re-write b2B
+
+and need to relate computational sha_h to inductive bytes_bits_lists
+might want to use my old computational framework
+
+even after writing this -- is it true??
+
+is there a name for this type of function invariant under conversion? / mathematical theory?
+
+t ~ T 
+->
+(Tt . F . tT) t ~ F T
+with ~ meaning tT x = X?
+
+depends on properties of tT, Tt, F as well
+
+test with bytes, bits, xor? +?
+depends on endianness?
+Tt . tT = id
+
+now
+- use framework
+- prove computational <-> inductive
+
+
+ *)
                     bytes_bits_lists bits bytes ->
                     bytes_bits_lists
                       (hash_words_padded sha_h sha_iv sha_splitandpad bits)
@@ -520,12 +558,13 @@ Proof.
     +
       rewrite -> SHA256.hash_blocks_equation.
       rewrite -> hash_blocks_bits_equation.
+(* need sha_h, sha_iv *)
+
       (* TODO: intlist_to_Zlist & did I actually fully prove pad_compose equal? *)
       (* TODO: SHA256.init_registers: difference *)
-      simpl.
-
-
       (* simpl. *)
+
+      
 
 (* TODO: need sha_h, sha_splitandpad *)
 (* TODO: how to use this? *)
