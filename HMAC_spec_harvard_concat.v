@@ -172,7 +172,21 @@ Definition c:nat := (SHA256_.DigestLength * 8)%nat.
 Definition p:=(32 * 8)%nat.
 
 Parameter sha_iv : Blist.
-Parameter sha_h : Blist -> Blist -> Blist.
+(* Parameter sha_h : Blist -> Blist -> Blist. *)
+(* TODO 
+write the two parameters
+*)
+Parameter bytesToBits : list Z -> Blist.
+Parameter bitsToBytes : Blist -> list Z.
+Check SHA256.hash_blocks.       (* SHA256.registers -> list int -> SHA256.registers *)
+Locate SHA256.registers.
+Transparent SHA256.registers.
+Definition sha_h (regs : Blist) (block : Blist) : Blist :=
+  bytesToBits (SHA256.intlist_to_Zlist
+                 (SHA256.hash_blocks (SHA256.Zlist_to_intlist (bitsToBytes regs))
+                                     (SHA256.Zlist_to_intlist (bitsToBytes block))
+              )).
+
 Parameter sha_splitandpad : Blist -> Blist.
 
 (* -------------- *)
@@ -517,7 +531,7 @@ t ~ T
 (Tt . F . tT) t ~ F T
 with ~ meaning tT x = X?
 
-depends on properties of tT, Tt, F as well
+Depends on properties of tT, Tt, F as well
 
 test with bytes, bits, xor? +?
 depends on endianness?
@@ -526,7 +540,25 @@ Tt . tT = id
 now
 - use framework
 - prove computational <-> inductive
+- what about the iteration of sha_h??
+- figure out how to use rnd/round in sha_h composition (see paper)
+  - why not just wrap it around hash_block? has the right type
+  - actually it's list int -> list int -> list int, which might be more akin to list of lists
+  - ints are very different from Zs (see Z_to_int, Zlist_to_intlist)
+  - what if the specs AREN'T equivalent? doing operations on packed ints may differ from
+    doing them on bits
+  - what if i write a bits to int conversion? (bits -> bytes (Z) -> int)
+    - bits -> bytes = len % 8 = 0, bytes -> ints -> len % 4 = 0 --> len bits % 32 = 0
+    - TODO: which is a *stronger* condition than we had
+    - the second arrow already exists
+    - not sure if that works with bytes_bits_lists, need more
+    - would that also require a custom sha_h?
+  - 
 
+- still need to write sha_splitandpad 
+   - and prove equivalence on that! seems more manageable
+- write bitsToBytes and bytesToBits (computational)
+   - https://coq.inria.fr/library/Coq.Strings.Ascii.html
 
  *)
                     bytes_bits_lists bits bytes ->
@@ -555,9 +587,11 @@ Proof.
 
     induction splitandpad_equiv.
 
-    +
+    + 
+      Check sha_h.
+      unfold sha_h.
       rewrite -> SHA256.hash_blocks_equation.
-      rewrite -> hash_blocks_bits_equation.
+      rewrite -> hash_blocks_bits_equation. (* _ :: _? *)
 (* need sha_h, sha_iv *)
 
       (* TODO: intlist_to_Zlist & did I actually fully prove pad_compose equal? *)
