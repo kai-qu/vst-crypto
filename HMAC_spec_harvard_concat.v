@@ -10,6 +10,8 @@ Require Import Coqlib.
 Require Import sha_padding_lemmas.
 Require Import functional_prog.
 Require Import hmac_common_lemmas.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
+Require Import Coq.Strings.String.
 
 Require Import List. Import ListNotations.
 
@@ -150,6 +152,149 @@ End HMAC.
 
 Module Equiv.
 
+  (* ----- Inductive *)
+
+Definition asZ (x : bool) : Z := if x then 1 else 0.
+
+Definition convertByteBits (bits : Blist) (byte : Z) : Prop :=
+  exists (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
+   bits = [b0; b1; b2; b3; b4; b5; b6; b7] /\
+   byte =  (1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
+         + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7)).
+
+Inductive bytes_bits_lists : Blist -> list Z -> Prop :=
+  | eq_empty : bytes_bits_lists nil nil
+  | eq_cons : forall (bits : Blist) (bytes : list Z)
+                     (b0 b1 b2 b3 b4 b5 b6 b7 : bool) (byte : Z),
+                bytes_bits_lists bits bytes ->
+                convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte ->
+                bytes_bits_lists (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits)
+                                 (byte :: bytes).
+
+Definition byte_to_64list (byte : byte) : list Z :=
+   map Byte.unsigned (HMAC_SHA256.sixtyfour byte).
+
+Definition Z_to_64list (num : Z) : list Z :=
+   HMAC_SHA256.sixtyfour num.
+
+(* ----- Computational *)
+
+(* byte = Z (not byte type), bit = bool *)
+(* endianness: TODO *)
+
+(* bytes to bits *)
+
+(* TODO: assumes Z is positive and in range, does not use Z.positive 
+-- does this make the following proofs false? *)
+
+Definition div_mod (num : Z) (denom : Z) : bool * Z :=
+  (Z.gtb (num / denom) 0, num mod denom).
+
+Eval compute in div_mod 129 128.
+Eval compute in div_mod 1 64.
+
+Definition byteToBits (byte : Z) : Blist :=
+  let (b7, rem7) := div_mod byte 128 in
+  let (b6, rem6) := div_mod rem7 64 in
+  let (b5, rem5) := div_mod rem6 32 in
+  let (b4, rem4) := div_mod rem5 16 in
+  let (b3, rem3) := div_mod rem4 8 in
+  let (b2, rem2) := div_mod rem3 4 in
+  let (b1, rem1) := div_mod rem2 2 in
+  let (b0, rem0) := div_mod rem1 1 in
+  [b0; b1; b2; b3; b4; b5; b6; b7].
+
+Fixpoint bytesToBits (bytes : list Z) : Blist :=
+  match bytes with
+    | [] => []
+    | byte :: xs => byteToBits byte ++ bytesToBits xs
+  end.
+
+Definition bitsToByte (bits : Blist) : Z :=
+  match bits with
+    | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: nil =>
+      1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
+      + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7)
+    | _ => -1                   (* should not happen *)
+  end.
+
+Fixpoint bitsToBytes (bits : Blist) : list Z :=
+  match bits with
+    | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: xs =>
+      let byte := 1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
+         + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7) in
+      byte :: bitsToBytes xs
+    | _ => []
+  end.
+
+Require Import Coq.Strings.Ascii.
+Open Scope string_scope.
+
+Definition asStr (x : bool) : string := if x then "1" else "0".
+
+Definition toStr (bits : Blist) : list string :=
+  map asStr bits.
+
+Eval compute in toStr (bytesToBits [8]).
+Eval compute in toStr (bytesToBits [127]).
+Eval compute in toStr (bytesToBits [128]).
+Eval compute in toStr (bytesToBits [255]).
+
+(* id for one composition *)
+
+Lemma byte_bit_byte_ex : forall (x : Z), x = 128 -> bitsToByte (byteToBits x) = x.
+Proof. intros. rewrite H. simpl. reflexivity. Qed.  
+
+Theorem byte_bit_byte_id : forall (byte : Z),
+                                bitsToByte (byteToBits byte) = byte.
+Proof.
+  intros byte.
+  destruct (byteToBits byte) as
+      [ | x0 [ | x1 [ | x2 [ | x3 [ | x4 [ | x5 [ | x6 [ | x7 xs] ] ]  ]  ] ] ] ].
+  admit. admit. admit. admit. admit. admit. admit. admit. (* TODO *)
+
+  unfold bitsToByte.
+
+(* need that byte = ... *)
+
+  (* destruct x0. destruct x1. destruct x2. destruct x3. *)
+  (* destruct x4. destruct x5. destruct x6. destruct x7. *)
+  
+
+
+  (* list needs to be of right length *)
+  (* unfold bitsToByte. *)
+  
+
+Abort.
+
+Theorem bytes_bits_bytes_id : forall (bytes : list Z),
+                                bitsToBytes (bytesToBits bytes) = bytes.
+Proof.
+  intros bytes.
+  unfold bytesToBits.
+  unfold bitsToBytes.
+
+Abort.
+
+SearchAbout modulo.
+
+(* conditional id for other composition *)
+Theorem bytes_bits_bytes_id : forall (bits : Blist),
+                                (length bits mod 8)%nat = 0%nat ->
+                                bytesToBits (bitsToBytes bits) = bits.
+Proof.
+  intros bytes.
+  unfold bytesToBits.
+  unfold bitsToBytes.
+
+Abort.
+
+(* try proving equivalance on sample function (e.g. byte addition) *)
+
+
+(* ----------------------------------------------- *)
+
 Check HMAC.
 
 (* HMAC
@@ -188,31 +333,6 @@ Definition sha_h (regs : Blist) (block : Blist) : Blist :=
               )).
 
 Parameter sha_splitandpad : Blist -> Blist.
-
-(* -------------- *)
-
-Definition asZ (x : bool) : Z := if x then 1 else 0.
-
-Definition convertByteBits (bits : Blist) (byte : Z) : Prop :=
-  exists (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
-   bits = [b0; b1; b2; b3; b4; b5; b6; b7] /\
-   byte =  (1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
-         + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7)).
-
-Inductive bytes_bits_lists : Blist -> list Z -> Prop :=
-  | eq_empty : bytes_bits_lists nil nil
-  | eq_cons : forall (bits : Blist) (bytes : list Z)
-                     (b0 b1 b2 b3 b4 b5 b6 b7 : bool) (byte : Z),
-                bytes_bits_lists bits bytes ->
-                convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte ->
-                bytes_bits_lists (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits)
-                                 (byte :: bytes).
-
-Definition byte_to_64list (byte : byte) : list Z :=
-   map Byte.unsigned (HMAC_SHA256.sixtyfour byte).
-
-Definition Z_to_64list (num : Z) : list Z :=
-   HMAC_SHA256.sixtyfour num.
 
 (* -------------------------------------------------------- LEMMAS *)
 
@@ -533,8 +653,6 @@ with ~ meaning tT x = X?
 
 Depends on properties of tT, Tt, F as well
 
-test with bytes, bits, xor? +?
-depends on endianness?
 Tt . tT = id
 
 now
@@ -559,6 +677,7 @@ now
    - and prove equivalence on that! seems more manageable
 - write bitsToBytes and bytesToBits (computational)
    - https://coq.inria.fr/library/Coq.Strings.Ascii.html
+   - test with bytes, bits, xor? +? depends on endianness?
 
  *)
                     bytes_bits_lists bits bytes ->
