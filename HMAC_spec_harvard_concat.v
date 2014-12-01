@@ -723,67 +723,25 @@ Proof.
   apply bytes_bits_def_eq.
 Qed.
 
-Check hash_words.
-Check hash_words_padded.
-
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
-                    (* assumptions *)
-                        (* do equivalent inputs really guarantee equivalent outputs?
+(* do equivalent inputs really guarantee equivalent outputs?
 this seems like an important central theorem.
 
 is it true for +, +b?
 do I have to prove 10 inner lemmas about various SHA ops?
 will a wrapper function around SHA work?
-need to write sha_h and sha_iv
-sha_h = B2b . rnd? . b2B
-  need to understand rnd0
-sha_iv = ?
-
-need to write b2B and prove things about lengths and ROUNDTRIPS
-need to re-write b2B
-
-and need to relate computational sha_h to inductive bytes_bits_lists
-might want to use my old computational framework
-
-even after writing this -- is it true??
-
 is there a name for this type of function invariant under conversion? / mathematical theory?
 
-t ~ T 
-->
-(Tt . F . tT) t ~ F T
-with ~ meaning tT x = X?
-
-Depends on properties of tT, Tt, F as well
-
-Tt . tT = id
-
 now
-- use framework
-- prove computational <-> inductive
-- what about the iteration of sha_h??
-- figure out how to use rnd/round in sha_h composition (see paper)
-  - why not just wrap it around hash_block? has the right type
-  - actually it's list int -> list int -> list int, which might be more akin to list of lists
   - ints are very different from Zs (see Z_to_int, Zlist_to_intlist)
   - what if the specs AREN'T equivalent? doing operations on packed ints may differ from
     doing them on bits
   - what if i write a bits to int conversion? (bits -> bytes (Z) -> int)
     - bits -> bytes = len % 8 = 0, bytes -> ints -> len % 4 = 0 --> len bits % 32 = 0
     - TODO: which is a *stronger* condition than we had
-    - the second arrow already exists
-    - not sure if that works with bytes_bits_lists, need more
-    - would that also require a custom sha_h?
-  - 
-
-- still need to write sha_splitandpad 
-   - and prove equivalence on that! seems more manageable
-- write bitsToBytes and bytesToBits (computational) X
-   - https://coq.inria.fr/library/Coq.Strings.Ascii.html X
-   - test with bytes, bits, xor? +? depends on endianness? X
-
  *)
+                        (* add assumptions here + intros them *)
                     bytes_bits_lists bits bytes ->
                     bytes_bits_lists
                       (hash_words_padded sha_h sha_iv sha_splitandpad bits)
@@ -824,7 +782,9 @@ Proof.
 
       apply bytes_bits_def_eq.
       
-    + 
+    +
+(* won't be able to relate directly, since it's a hash function *)
+(*   *)
       
 
 
@@ -854,6 +814,63 @@ Admitted.
 (* ---------- *)
 
 Theorem HMAC_spec_equiv : forall
+                            (K M H : list Z) (OP IP : Z)
+                            (k m h : Blist) (op ip : Blist),
+  ((length K) * 8)%nat = (c + p)%nat ->
+  Zlength K = Z.of_nat SHA256_.BlockSize ->
+(* TODO: first implies this *)
+  (* TODO: might need more hypotheses about lengths *)
+  bytes_bits_lists k K ->
+  bytes_bits_lists m M ->
+  bytes_bits_lists op (HMAC_SHA256.sixtyfour OP) ->
+  bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) ->
+  HMAC c p sha_h sha_iv sha_splitandpad op ip k m = h ->
+  HMAC_SHA256.HMAC IP OP M K = H ->
+  bytes_bits_lists h H.
+Proof.
+  intros K M H OP IP k m h op ip.
+  intros padded_key_len padded_key_len_byte padded_keys_eq msgs_eq ops_eq ips_eq.
+  intros HMAC_abstract HMAC_concrete.
+
+  intros.
+  unfold p, c in *.
+  simpl in *.
+
+  rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
+
+    (* code repeated between cases here *)
+    unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
+    
+    unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
+
+    unfold HMAC_SHA256.outerArg. unfold HMAC_SHA256.innerArg. (* unfold HMAC_SHA256.mkArg. *)
+    
+    simpl.
+
+    (* rewrite -> app_nil_r. *)
+
+    Check SHA_equiv_pad.
+    apply SHA_equiv_pad.
+    
+    (* assert (splitandpad_nil: sha_splitandpad [] = []). admit. (* TODO *) *)
+    (* rewrite -> splitandpad_nil. *)
+    (* simpl. (* this makes hash_words go away -- why? *) *)
+
+    apply concat_equiv.
+    apply xor_equiv_Z; try assumption.
+    * apply SHA_equiv_pad.
+      apply concat_equiv.
+      - apply xor_equiv_Z; try assumption.
+      (* bytes_bits_lists (sha_splitandpad m) M -- TODO  *)
+      (* - apply splitandpad_equiv. *)
+      - admit.
+        * admit.
+        * admit.
+Qed.
+
+
+(* induction doesn't work *)
+Theorem HMAC_spec_equiv_ind : forall
                             (K M H : list Z) (OP IP : Z)
                             (k m h : Blist) (op ip : Blist),
   ((length K) * 8)%nat = (c + p)%nat ->
