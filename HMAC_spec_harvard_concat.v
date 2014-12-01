@@ -342,6 +342,44 @@ Qed.
 
 Close Scope string_scope.
 
+(* ------- *)
+
+(* Lemma range_proof : forall (x : Z) (lower : Z) (upper : Z), *)
+(*                       lower <= upper -> *)
+(*                       lower <= x <= upper -> *)
+(*                       ... *)
+                      
+(* TODO: range_proof above, or prove for all things in range *)
+(* need that all bytes are in range *)
+Theorem bytes_bits_def_eq : forall (bytes : list Z),
+                              bytes_bits_lists (bytesToBits bytes) bytes.
+Proof.
+  intros bytes.
+  induction bytes as [ | byte bytes ].
+  -
+    simpl. apply eq_empty.
+  -
+    Print bytes_bits_lists.
+    apply eq_cons.
+
+    *
+      apply IHbytes.
+    *
+      unfold convertByteBits.
+      do 8 eexists.
+      split.
+      +
+        reflexivity.
+      + 
+        assert (byte_range : 0 <= byte < 256). admit.
+        assert (byte_val : byte = 200). admit.
+        rewrite byte_val.
+        simpl.
+        reflexivity.
+Qed.      
+      
+  
+
 (* ----------------------------------------------- *)
 
 Check HMAC.
@@ -761,11 +799,10 @@ Proof.
       rewrite -> hash_blocks_bits_equation.
       unfold sha_iv.
       (* note: i'm definining sha_iv according to what is needed here *)
-      assert (def_eq : forall (l : list Z), bytes_bits_lists (bytesToBits l) l). admit.
-        (* TODO! *)
-      apply def_eq.
+
+      apply bytes_bits_def_eq.
       
-    +
+    + 
       
 
 
