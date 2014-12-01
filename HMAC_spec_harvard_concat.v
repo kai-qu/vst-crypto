@@ -723,6 +723,59 @@ Proof.
   apply bytes_bits_def_eq.
 Qed.
 
+(* induct in block sizes? (512 bits, 64 bytes respectively): 
+fold equivalence:
+given any iv, equivalent inputs -> one round of hashing -> equivalent outputs
+
+sha_h sha_iv (firstn 512 bits)
+ = 
+bytesToBits
+           (SHA256.intlist_to_Zlist
+              (SHA256.hash_block
+                 (SHA256.Zlist_to_intlist (bitsToBytes sha_iv))
+                 (SHA256.Zlist_to_intlist
+                    (bitsToBytes
+                       (firstn 512
+                          bits)))))
+
+want: ~
+
+SHA256.hash_block SHA256.init_registers
+                 (firstn 16 (SHA256.Zlist_to_intlist bytes)) 
+*)
+
+Lemma fold_equiv :
+  forall (bits : Blist) (bytes : list Z)
+         (regs : Blist) (REGS : SHA256.registers),
+                     (* can't quite induct
+(not true for registers of any length), maybe use computational instead *)
+                     (* relation for int -> Z? *)
+    (length bits)%nat = 512%nat ->
+    (length bytes)%nat = 64%nat -> (* removes firstn 16 (Zlist->intlist bytes) *)
+
+    regs = bytesToBits (SHA256.intlist_to_Zlist REGS) ->
+    bits = bytesToBits bytes ->
+
+    sha_h regs bits =
+    bytesToBits (SHA256.intlist_to_Zlist
+                   (SHA256.hash_block REGS
+                                      (SHA256.Zlist_to_intlist bytes))).
+Proof.
+  intros bits bytes regs REGS bits_blocksize bytes_blocksize regs_eq input_eq.
+  unfold sha_h.
+  apply f_equal.
+  apply f_equal.
+  
+  rewrite -> regs_eq.
+  rewrite -> input_eq.
+  rewrite -> bytes_bits_bytes_id.
+  rewrite -> bytes_bits_bytes_id.
+  rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
+  reflexivity.
+(* TODO: need to apply fold_equiv below with inducting on block size *)
+(* TODO: make sure this proof is right / useful *)
+Qed.
+
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
 (* do equivalent inputs really guarantee equivalent outputs?
@@ -778,14 +831,23 @@ Proof.
       (* bit side *)
       rewrite -> hash_blocks_bits_equation.
       unfold sha_iv.
-      (* note: i'm definining sha_iv according to what is needed here *)
+      (* note: i'm defining sha_iv according to what is needed here *)
 
       apply bytes_bits_def_eq.
       
     +
-(* won't be able to relate directly, since it's a hash function *)
-(*   *)
+      rewrite -> SHA256.hash_blocks_equation.
+      rewrite -> hash_blocks_bits_equation.
+      unfold sha_h.
+      Print SHA256.hash_block.
       
+      
+(* won't be able to relate directly, since it's a hash function *)
+      (* see above theorem *)
+(* TODO: need to figure out how to induct in block size,
+if theorem above is correct,
+and how to apply it here *)
+
 
 
 Admitted
@@ -847,21 +909,44 @@ Proof.
     
     simpl.
 
-    (* rewrite -> app_nil_r. *)
-
     Check SHA_equiv_pad.
     apply SHA_equiv_pad.
     
-    (* assert (splitandpad_nil: sha_splitandpad [] = []). admit. (* TODO *) *)
-    (* rewrite -> splitandpad_nil. *)
-    (* simpl. (* this makes hash_words go away -- why? *) *)
-
     apply concat_equiv.
     apply xor_equiv_Z; try assumption.
-    * apply SHA_equiv_pad.
+    *
+      apply SHA_equiv_pad.
       apply concat_equiv.
+
       - apply xor_equiv_Z; try assumption.
+
       (* bytes_bits_lists (sha_splitandpad m) M -- TODO  *)
+      (* 
+this looks like an actual difference in the specs.
+       see HMAC_2K (line 90) in HMAC_spec_harvard_v, or Theorem HMAC_unfold
+
+       is this different from the HMAC paper spec itself?
+       the message can be variable length
+
+to make this work, you can either use ^, or use
+hash_words_padded sha_h sha_iv sha_splitandpad
+           (BLxor k ip ++ sha_splitandpad m)))
+= 
+hash_words_padded sha_h sha_iv sha_splitandpad
+           (BLxor k ip ++ m)))
+
+which isn't true due to the nature of the padding function (depends on length of input).
+
+his spec will also have that problem with fpad (it'll need to be a specific fpad:
+10..0[length], at that point should be baked into hash_words as hash_words_padded.
+
+
+---
+
+proposed solution: since i've already made many changes,
+and sha_splitandpad is included in hash_words_padded, delete sha_splitandpad, completing the proof
+
+      *)
       (* - apply splitandpad_equiv. *)
       - admit.
         * admit.
