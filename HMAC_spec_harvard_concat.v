@@ -378,7 +378,29 @@ Proof.
         reflexivity.
 Qed.      
       
-  
+
+(* not sure which to use / which is true *)
+(* TODO *)
+Theorem bytes_bits_imp_ok : forall (bits : Blist) (bytes : list Z),
+                           bytes_bits_lists bits bytes -> bits = bytesToBits bytes.
+Proof.
+  intros.
+  induction H.
+  +
+    reflexivity.
+
+  +
+    unfold bytesToBits.
+    
+
+
+Admitted.
+
+Theorem bytes_bits_imp_other : forall (bits : Blist) (bytes : list Z),
+                           bytes_bits_lists bits bytes -> bytes = bitsToBytes bits.
+Proof.
+
+Admitted.
 
 (* ----------------------------------------------- *)
 
@@ -403,7 +425,6 @@ Parameter sha_splitandpad_vector :
 Definition c:nat := (SHA256_.DigestLength * 8)%nat.
 Definition p:=(32 * 8)%nat.
 
-(* Parameter sha_iv : Blist. *)
 Definition sha_iv : Blist :=
   bytesToBits (SHA256.intlist_to_Zlist SHA256.init_registers).
 
@@ -414,7 +435,9 @@ Definition sha_h (regs : Blist) (block : Blist) : Blist :=
                                      (SHA256.Zlist_to_intlist (bitsToBytes block))
               )).
 
-Parameter sha_splitandpad : Blist -> Blist.
+(* Parameter sha_splitandpad : Blist -> Blist. *)
+Definition sha_splitandpad (msg : Blist) : Blist :=
+  bytesToBits (sha_padding_lemmas.pad (bitsToBytes msg)).
 
 (* -------------------------------------------------------- LEMMAS *)
 
@@ -692,14 +715,13 @@ Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
 Proof.
   intros bits bytes inputs_eq.
   unfold concat.
-  unfold pad.
-(* TODO: define sha_splitandpad *)
+  unfold sha_splitandpad.
 
-(* sha_splitandpad should be defined as split . Bb . pad . bB 
-   or Bb . split . pad . bB
- *)
-
-Admitted.  
+  apply bytes_bits_imp_ok in inputs_eq.
+  rewrite inputs_eq.
+  rewrite bytes_bits_bytes_id.
+  apply bytes_bits_def_eq.
+Qed.
 
 Check hash_words.
 Check hash_words_padded.
