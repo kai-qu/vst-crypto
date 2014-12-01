@@ -78,7 +78,7 @@ Section HMAC.
   Locate fold_left.
   
   Definition h_star k (m : Blist) :=
-    hash_blocks_bits h m k.
+    hash_blocks_bits h k m.
   (* The composition of the keyed hash function with the IV gives a hash function on lists of words. *)
   Definition hash_words := h_star iv.
 
@@ -242,18 +242,28 @@ Eval compute in toStr (bytesToBits [255]).
 
 (* id for one composition *)
 
-Lemma byte_bit_byte_ex : forall (x : Z), x = 128 -> bitsToByte (byteToBits x) = x.
-Proof. intros. rewrite H. simpl. reflexivity. Qed.  
+Lemma byte_bit_byte_ex : forall (x : Z), x = 68 -> bitsToByte (byteToBits x) = x.
+Proof. intros. rewrite H. simpl. reflexivity. Qed.
 
+(* can prove by testing all bytes in range... *)
 Theorem byte_bit_byte_id : forall (byte : Z),
+                             0 <= byte < 256 ->
                                 bitsToByte (byteToBits byte) = byte.
 Proof.
-  intros byte.
-  destruct (byteToBits byte) as
-      [ | x0 [ | x1 [ | x2 [ | x3 [ | x4 [ | x5 [ | x6 [ | x7 xs] ] ]  ]  ] ] ] ].
-  admit. admit. admit. admit. admit. admit. admit. admit. (* TODO *)
-
+  intros byte range.
+  destruct range as [lower upper].
+  unfold byteToBits.
   unfold bitsToByte.
+  (* Opaque asZ. *)
+  (* Opaque div_mod. *)
+  
+  (* destruct b0. *)
+
+  (* destruct (byteToBits byte) as *)
+  (*     [ | x0 [ | x1 [ | x2 [ | x3 [ | x4 [ | x5 [ | x6 [ | x7 xs] ] ]  ]  ] ] ] ]. *)
+  (* admit. admit. admit. admit. admit. admit. admit. admit. (* TODO *) *)
+
+  (* unfold bitsToByte. *)
 
 (* need that byte = ... *)
 
@@ -265,22 +275,27 @@ Proof.
   (* list needs to be of right length *)
   (* unfold bitsToByte. *)
   
-
-Abort.
+Admitted.
 
 Theorem bytes_bits_bytes_id : forall (bytes : list Z),
                                 bitsToBytes (bytesToBits bytes) = bytes.
 Proof.
   intros bytes.
-  unfold bytesToBits.
-  unfold bitsToBytes.
+  induction bytes as [ | byte bytes].
+  - reflexivity.
+  - unfold bytesToBits.
+    unfold bitsToBytes.
 
-Abort.
+Admitted.
 
-SearchAbout modulo.
+(* could also do proof by enumeration *)
+Lemma bit_byte_bit_ex : forall (b0 b1 b2 b3 b4 b5 b6 b7 : bool) (x : Blist),
+                          x = [true; true; true; false; true; true; true; true]
+                          -> byteToBits (bitsToByte x) = x.
+Proof. intros. rewrite H. simpl. reflexivity. Qed.
 
 (* conditional id for other composition *)
-Theorem bytes_bits_bytes_id : forall (bits : Blist),
+Theorem bytes_bits_bytes_id_len : forall (bits : Blist),
                                 (length bits mod 8)%nat = 0%nat ->
                                 bytesToBits (bitsToBytes bits) = bits.
 Proof.
@@ -288,10 +303,44 @@ Proof.
   unfold bytesToBits.
   unfold bitsToBytes.
 
-Abort.
+Admitted.
 
 (* try proving equivalance on sample function (e.g. byte addition) *)
 
+(* unary *)
+Definition byte_neg (bytes : list Z) : list Z :=
+  map (fun byte => -1 * byte) bytes.
+
+Definition wrap (f : list Z -> list Z) : Blist -> Blist :=
+  bytesToBits @ f @ bitsToBytes.
+
+Definition bit_neg : Blist -> Blist :=
+  wrap byte_neg.
+
+Lemma test_neg : forall (bits : Blist) (bytes : list Z),
+                   bits = [true; true; true; true; true; true; true; true] ->
+                   bytes = [127] -> (* relation *)
+                   bits = bytesToBits bytes ->
+                   bit_neg bits = bytesToBits (byte_neg bytes). (* relation *)
+Proof.
+  intros bits bytes bits_eq bytes_eq input_eq.
+  unfold bit_neg. unfold wrap.
+  replace ((bytesToBits @ byte_neg @ bitsToBytes) bits) with
+  (bytesToBits (byte_neg (bitsToBytes bits))).
+
+  rewrite bits_eq. rewrite bytes_eq.
+  simpl.
+  reflexivity.
+
+  admit.
+Qed.  
+  
+
+(* binary TODO *)
+(* Definition bit_add (x : Blist) (y : Blist) := *)
+  
+
+Close Scope string_scope.
 
 (* ----------------------------------------------- *)
 
@@ -316,19 +365,14 @@ Parameter sha_splitandpad_vector :
 Definition c:nat := (SHA256_.DigestLength * 8)%nat.
 Definition p:=(32 * 8)%nat.
 
-Parameter sha_iv : Blist.
-(* Parameter sha_h : Blist -> Blist -> Blist. *)
-(* TODO 
-write the two parameters
-*)
-Parameter bytesToBits : list Z -> Blist.
-Parameter bitsToBytes : Blist -> list Z.
+(* Parameter sha_iv : Blist. *)
+Definition sha_iv : Blist :=
+  bytesToBits (SHA256.intlist_to_Zlist SHA256.init_registers).
+
 Check SHA256.hash_blocks.       (* SHA256.registers -> list int -> SHA256.registers *)
-Locate SHA256.registers.
-Transparent SHA256.registers.
 Definition sha_h (regs : Blist) (block : Blist) : Blist :=
   bytesToBits (SHA256.intlist_to_Zlist
-                 (SHA256.hash_blocks (SHA256.Zlist_to_intlist (bitsToBytes regs))
+                 (SHA256.hash_block (SHA256.Zlist_to_intlist (bitsToBytes regs))
                                      (SHA256.Zlist_to_intlist (bitsToBytes block))
               )).
 
@@ -675,9 +719,9 @@ now
 
 - still need to write sha_splitandpad 
    - and prove equivalence on that! seems more manageable
-- write bitsToBytes and bytesToBits (computational)
-   - https://coq.inria.fr/library/Coq.Strings.Ascii.html
-   - test with bytes, bits, xor? +? depends on endianness?
+- write bitsToBytes and bytesToBits (computational) X
+   - https://coq.inria.fr/library/Coq.Strings.Ascii.html X
+   - test with bytes, bits, xor? +? depends on endianness? X
 
  *)
                     bytes_bits_lists bits bytes ->
@@ -706,23 +750,28 @@ Proof.
 
     induction splitandpad_equiv.
 
-    + 
-      Check sha_h.
-      unfold sha_h.
+    +
+      (* [pad bytes] = [] *)
+      (* byte side *)
+      assert (conv_empty: SHA256.Zlist_to_intlist [] = []). reflexivity.
+      rewrite -> conv_empty.
       rewrite -> SHA256.hash_blocks_equation.
-      rewrite -> hash_blocks_bits_equation. (* _ :: _? *)
-(* need sha_h, sha_iv *)
 
-      (* TODO: intlist_to_Zlist & did I actually fully prove pad_compose equal? *)
-      (* TODO: SHA256.init_registers: difference *)
-      (* simpl. *)
-
+      (* bit side *)
+      rewrite -> hash_blocks_bits_equation.
+      unfold sha_iv.
+      (* note: i'm definining sha_iv according to what is needed here *)
+      assert (def_eq : forall (l : list Z), bytes_bits_lists (bytesToBits l) l). admit.
+        (* TODO! *)
+      apply def_eq.
+      
+    +
       
 
-(* TODO: need sha_h, sha_splitandpad *)
-(* TODO: how to use this? *)
 
-Admitted.
+Admitted
+
+.
 
 (*
 TODO: list Blist instead of Blist? Types don't work here

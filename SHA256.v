@@ -180,10 +180,11 @@ Function hash_blocks (r: registers) (msg: list int) {measure length msg} : regis
   | nil => r
   | _ => hash_blocks (hash_block r (firstn 16 msg)) (skipn 16 msg)
   end.
-Proof. intros.
- destruct (lt_dec (length msg) 16).
- rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
- rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
+Proof.
+  intros.
+  destruct (lt_dec (length msg) 16).
+  rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
+  rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
 Defined.
 
 Check hash_blocks_equation.
