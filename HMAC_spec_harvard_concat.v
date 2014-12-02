@@ -128,7 +128,8 @@ Check hash_words.               (* list Blist -> Blist *)
         hash_words_padded (k_Out ++ h_in).
 
   Definition HMAC_2K (k : Blist) (m : Blist) :=
-    GHMAC_2K k (splitAndPad m).
+    (* GHMAC_2K k (splitAndPad m). *)
+    GHMAC_2K k m.
 
 Check HMAC_2K.
 (* Blist -> Blist -> Blist *)
@@ -391,6 +392,14 @@ Proof.
 
   +
     unfold bytesToBits.
+    
+
+
+Admitted.
+
+Theorem bytes_bits_imp_ok' : forall (bits : Blist) (bytes : list Z),
+                           bits = bytesToBits bytes -> bytes_bits_lists bits bytes.
+Proof.
     
 
 
@@ -744,11 +753,11 @@ SHA256.hash_block SHA256.init_registers
                  (firstn 16 (SHA256.Zlist_to_intlist bytes)) 
 *)
 
-Lemma fold_equiv :
+Lemma hash_block_equiv :
   forall (bits : Blist) (bytes : list Z)
          (regs : Blist) (REGS : SHA256.registers),
-                     (* can't quite induct
-(not true for registers of any length), maybe use computational instead *)
+                     (* can't induct
+(not true for registers of any length), use computational instead *)
                      (* relation for int -> Z? *)
     (length bits)%nat = 512%nat ->
     (length bytes)%nat = 64%nat -> (* removes firstn 16 (Zlist->intlist bytes) *)
@@ -776,6 +785,36 @@ Proof.
 (* TODO: make sure this proof is right / useful *)
 Qed.
 
+Check fold_left.
+Print fold_left.
+Check sha_h.
+Check SHA256.hash_blocks.
+Check sha_iv.
+Check SHA256.hash_blocks. Print SHA256.registers.
+
+Lemma fold_equiv_limited :
+  forall (l : Blist) (acc : Blist)
+         (L : list int) (ACC : list int)
+         (e : Blist) (E : list int),
+    exists
+      (convert : list int -> Blist),
+      l = convert L ->
+      acc = convert ACC ->
+      sha_h acc e = convert (SHA256.hash_block ACC E) ->
+    hash_blocks_bits sha_h l acc = convert (SHA256.hash_blocks L ACC).
+Proof.
+  intros.
+  exists (bytesToBits @ SHA256.intlist_to_Zlist).
+  intros inputs_eq acc_eq f_eq.
+
+  rewrite -> SHA256.hash_blocks_equation.
+  rewrite -> hash_blocks_bits_equation.
+
+(* prove by inducting in blocks *)
+  
+
+Admitted.
+    
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
 (* do equivalent inputs really guarantee equivalent outputs?
@@ -819,7 +858,7 @@ Proof.
     pose proof splitandpad_equiv as splitandpad_equiv.
     specialize (splitandpad_equiv bits bytes input_eq).
 
-    induction splitandpad_equiv.
+    induction splitandpad_equiv. (* <-- want to induct in block size here *)
 
     +
       (* [pad bytes] = [] *)
@@ -836,17 +875,26 @@ Proof.
       apply bytes_bits_def_eq.
       
     +
-      rewrite -> SHA256.hash_blocks_equation.
-      rewrite -> hash_blocks_bits_equation.
-      unfold sha_h.
-      Print SHA256.hash_block.
+      (* rewrite -> SHA256.hash_blocks_equation. *)
+      (* rewrite -> hash_blocks_bits_equation. *)
+      apply bytes_bits_imp_ok'.
+      eapply fold_equiv_limited.
+      Check SHA256.hash_blocks_equation.
+      Check hash_blocks_bits_equation.
+      (* unfold sha_h. *)
+
       
-      
+(* does the theorem above use splitandpad_equiv? yes *)
 (* won't be able to relate directly, since it's a hash function *)
       (* see above theorem *)
-(* TODO: need to figure out how to induct in block size,
+(* TODO: need to figure out how to **induct** in block size
+   (maybe without having x0 :: ... :: x511 on-screen)
 if theorem above is correct,
-and how to apply it here *)
+and how to apply it here 
+
+maybe define another inductive relation, inBlocks (like in sha_padding_lemmas)
+and prove that it's inBlocks
+*)
 
 
 
@@ -948,7 +996,7 @@ and sha_splitandpad is included in hash_words_padded, delete sha_splitandpad, co
 
       *)
       (* - apply splitandpad_equiv. *)
-      - admit.
+      - assumption.
         * admit.
         * admit.
 Qed.
