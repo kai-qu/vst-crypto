@@ -1,3 +1,8 @@
+(* Admitted/admitted lemmas:
+
+39 - 12 = 27?
+ *)
+
 Set Implicit Arguments.
 
 (* Require Import Bvector. *)
@@ -794,29 +799,52 @@ Check SHA256.hash_blocks. Print SHA256.registers.
 
 Lemma fold_equiv_limited :
   forall (l : Blist) (acc : Blist)
-         (L : list int) (ACC : list int)
-         (e : Blist) (E : list int),
-    exists
-      (convert : list int -> Blist),
-      l = convert L ->
-      acc = convert ACC ->
-      sha_h acc e = convert (SHA256.hash_block ACC E) ->
-    hash_blocks_bits sha_h l acc = convert (SHA256.hash_blocks L ACC).
+         (L : list int) (ACC : list int),
+    (* length assumptions about list *)
+    (* conversion function: bytesToBits @ SHA256.intlist_to_Zlist *)
+      (16 | length L)%nat ->
+      l = bytesToBits (SHA256.intlist_to_Zlist L) ->
+      acc = bytesToBits (SHA256.intlist_to_Zlist ACC) ->
+      hash_blocks_bits sha_h acc l = bytesToBits (SHA256.intlist_to_Zlist
+                                                    (SHA256.hash_blocks ACC L)).
 Proof.
-  intros.
-  exists (bytesToBits @ SHA256.intlist_to_Zlist).
-  intros inputs_eq acc_eq f_eq.
+  intros l acc L ACC byte_len inputs_eq acc_eq.
 
+  pose proof hash_block_equiv as hash_block_equiv.
+
+  destruct byte_len.
+  
+  revert l L acc ACC H acc_eq inputs_eq.
+  induction x; intros.
+
+  destruct L; inversion H.
+  (* TODO *)
+  (* simpl on compose later *)
+  (* replace ((bytesToBits @ SHA256.intlist_to_Zlist) []) with *)
+  (* (bytesToBits @ SHA256.intlist_to_Zlist) *)
+  (* simpl in inputs_eq. *)
+  admit.
+  (* prove that about l *)
+  
+  (* length of msg *)
   rewrite -> SHA256.hash_blocks_equation.
   rewrite -> hash_blocks_bits_equation.
+
+  (* firstn and skip n lemma *)
+(* SearchAbout firstn. *)
+  
+  Check SHA256.hash_blocks_equation.
+  
+
 
 (* prove by inducting in blocks *)
   
 
 Admitted.
     
+SearchAbout fold_left.
 
-Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
+Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z) (e : Blist) (E : list int),
 (* do equivalent inputs really guarantee equivalent outputs?
 this seems like an important central theorem.
 
@@ -840,7 +868,7 @@ now
                       (SHA256_.Hash bytes).
 
 Proof.
-  intros bits bytes input_eq.
+  intros bits bytes e E input_eq.
   unfold SHA256_.Hash.
   rewrite -> functional_prog.SHA_256'_eq.
   unfold SHA256.SHA_256.
@@ -858,27 +886,44 @@ Proof.
     pose proof splitandpad_equiv as splitandpad_equiv.
     specialize (splitandpad_equiv bits bytes input_eq).
 
-    induction splitandpad_equiv. (* <-- want to induct in block size here *)
+    (* induction splitandpad_equiv. (* <-- want to induct in block size here *) *)
 
-    +
-      (* [pad bytes] = [] *)
-      (* byte side *)
-      assert (conv_empty: SHA256.Zlist_to_intlist [] = []). reflexivity.
-      rewrite -> conv_empty.
-      rewrite -> SHA256.hash_blocks_equation.
+    (* + *)
+    (*   (* [pad bytes] = [] *) *)
+    (*   (* byte side *) *)
+    (*   assert (conv_empty: SHA256.Zlist_to_intlist [] = []). reflexivity. *)
+    (*   rewrite -> conv_empty. *)
+    (*   rewrite -> SHA256.hash_blocks_equation. *)
 
-      (* bit side *)
-      rewrite -> hash_blocks_bits_equation.
-      unfold sha_iv.
-      (* note: i'm defining sha_iv according to what is needed here *)
+    (*   (* bit side *) *)
+    (*   rewrite -> hash_blocks_bits_equation. *)
+    (*   unfold sha_iv. *)
+    (*   (* note: i'm defining sha_iv according to what is needed here *) *)
 
-      apply bytes_bits_def_eq.
+    (*   apply bytes_bits_def_eq. *)
       
-    +
+    (* + *)
       (* rewrite -> SHA256.hash_blocks_equation. *)
       (* rewrite -> hash_blocks_bits_equation. *)
       apply bytes_bits_imp_ok'.
-      eapply fold_equiv_limited.
+      pose proof fold_equiv_limited as fold_equiv_limited. (* delete later *)
+      (* TODO: factor out the sha_h as lemma from statement; use hash_blocks_equiv in the proof *)
+      apply fold_equiv_limited.
+      * admit.
+      * unfold sha_splitandpad. rewrite -> pure_lemmas.Zlist_to_intlist_to_Zlist.
+        apply bytes_bits_imp_other in input_eq.
+        rewrite -> input_eq.
+        reflexivity.
+        + admit.                        (* padding length lemma *)
+        + Print SHA256.isbyteZ. Print Forall. (* TODO: show each byte is in range *)
+          admit.
+
+     * unfold sha_iv. reflexivity.
+
+  - admit.                      (* TODO: compose lemma *)
+Qed.    
+          (* TODO is this right? *)
+
       Check SHA256.hash_blocks_equation.
       Check hash_blocks_bits_equation.
       (* unfold sha_h. *)
