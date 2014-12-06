@@ -807,7 +807,8 @@ Proof.
   - inversion H.
   - reflexivity.
 Qed.    
-   
+
+(*   
 Parameter A B : Type.
 Parameter convert_BA : B -> A.
 Parameter convert_AB : A -> B.
@@ -856,9 +857,10 @@ Proof.
     apply once_eq.
     apply IHn'.
     apply input_eq.
-    *                           (* f is wrapped (here, f is sha_h? *)
+    *                           (* f is wrapped (here, f is sha_h?) *)
       admit.
 Qed.    
+*)
 
 (* it's more of an iteration theorem than a fold theorem *)
 Lemma fold_equiv_limited :
@@ -958,7 +960,7 @@ Admitted.
     
 SearchAbout fold_left.
 
-Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z) (e : Blist) (E : list int),
+Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
 (* do equivalent inputs really guarantee equivalent outputs?
 this seems like an important central theorem.
 
@@ -982,7 +984,7 @@ now
                       (SHA256_.Hash bytes).
 
 Proof.
-  intros bits bytes e E input_eq.
+  intros bits bytes input_eq.
   unfold SHA256_.Hash.
   rewrite -> functional_prog.SHA_256'_eq.
   unfold SHA256.SHA_256.
@@ -1056,30 +1058,6 @@ and prove that it's inBlocks
 *)
 
 
-
-Admitted
-
-.
-
-(*
-TODO: list Blist instead of Blist? Types don't work here
-Maybe I should rewrite SHA to operate on list Blist
-
-Lemma SHA_equiv_nopad : forall (bits_list : list Blist) (bytes : list Z),
-                    (* assumptions *)
-                    bytes_bits_lists' bits_list bytes ->
-                    bytes_bits_lists'
-                      (* note that bits_list is:
-                         [thing of block size] :: [thing padded to be of block size] *)
-                      (hash_words sha_h sha_iv bits_list)
-                      (SHA256_.Hash bytes).
-
-Proof.
-
-
-Admitted.
-*)  
-
 (* ---------- *)
 
 Theorem HMAC_spec_equiv : forall
@@ -1116,7 +1094,6 @@ Proof.
     
     simpl.
 
-    Check SHA_equiv_pad.
     apply SHA_equiv_pad.
     
     apply concat_equiv.
@@ -1159,104 +1136,3 @@ and sha_splitandpad is included in hash_words_padded, delete sha_splitandpad, co
         * admit.
         * admit.
 Qed.
-
-
-(* induction doesn't work *)
-Theorem HMAC_spec_equiv_ind : forall
-                            (K M H : list Z) (OP IP : Z)
-                            (k m h : Blist) (op ip : Blist),
-  ((length K) * 8)%nat = (c + p)%nat ->
-  Zlength K = Z.of_nat SHA256_.BlockSize ->
-(* TODO: first implies this *)
-  (* TODO: might need more hypotheses about lengths *)
-  bytes_bits_lists k K ->
-  bytes_bits_lists m M ->
-  bytes_bits_lists op (HMAC_SHA256.sixtyfour OP) ->
-  bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) ->
-  HMAC c p sha_h sha_iv sha_splitandpad op ip k m = h ->
-  HMAC_SHA256.HMAC IP OP M K = H ->
-  bytes_bits_lists h H.
-Proof.
-  intros K M H OP IP k m h op ip.
-  intros padded_key_len padded_key_len_byte padded_keys_eq msgs_eq ops_eq ips_eq.
-  intros HMAC_abstract HMAC_concrete.
-
-  intros.
-  unfold p, c in *.
-  simpl in *.
-
-  rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
-
-  induction msgs_eq.
-
-  -
-    (* code repeated between cases here *)
-    unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
-    
-    unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
-
-    unfold HMAC_SHA256.outerArg. unfold HMAC_SHA256.innerArg. (* unfold HMAC_SHA256.mkArg. *)
-    
-    simpl.
-
-    rewrite -> app_nil_r.
-
-    Check SHA_equiv_pad.
-    apply SHA_equiv_pad.
-    
-    assert (splitandpad_nil: sha_splitandpad [] = []). admit. (* TODO *)
-    rewrite -> splitandpad_nil.
-    (* simpl. (* this makes hash_words go away -- why? *) *)
-
-    apply concat_equiv.
-    apply xor_equiv_Z; try assumption.
-    * apply SHA_equiv_pad.
-      rewrite -> app_nil_r.
-      apply xor_equiv_Z; try assumption.
-    * admit.
-    * admit.
-
-    (* Eval compute in HMAC_SHA256.HMAC 54 92 []. *)
-
-  -
-    unfold HMAC.
-    unfold HMAC_SHA256.HMAC.
-
-    unfold HMAC_SHA256.INNER.
-    unfold HMAC_SHA256.innerArg.
-    (* unfold HMAC_SHA256.mkArgZ. *)
-    (* Print HMAC_SHA256.mkArg. *)
-    (* unfold HMAC_SHA256.mkArg. *)
-
-    unfold HMAC_SHA256.OUTER.
-    unfold HMAC_SHA256.outerArg.
-    (* unfold HMAC_SHA256.mkArgZ. *)
-    (* unfold HMAC_SHA256.mkArg. *)
-
-    unfold HMAC_2K.
-    unfold GHMAC_2K.
-    Print split_append_id.
-    rewrite -> split_append_id.
-
-    
-Abort.
-
-
-(* HMAC IP OP M K =
-    H ( K (+) OP      ++
-        H ((K (+) IP) ++ M)
-      ) 
-*)
-    
-
-    (* Use these when working on SHA and generate_and_pad *)
-    (*
-    unfold HMAC_SHA256.OUTER in *.
-    unfold SHA256_.Hash in *.
-    rewrite -> functional_prog.SHA_256'_eq in *.
-
-    unfold SHA256.SHA_256 in *.
-    repeat rewrite <- sha_padding_lemmas.pad_compose_equal in *.
-    unfold sha_padding_lemmas.generate_and_pad' in *.
-     *)
-
