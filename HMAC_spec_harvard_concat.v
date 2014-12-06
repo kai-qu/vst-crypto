@@ -797,6 +797,19 @@ Check SHA256.hash_blocks.
 Check sha_iv.
 Check SHA256.hash_blocks. Print SHA256.registers.
 
+Lemma length_not_emp :
+  forall {A B : Type} (l : list A) (z y : B),
+    (Datatypes.length l > 0)%nat -> match l with [] => z | _ => y end = y.
+    (* exists (x : A) (xs : list A), l = x :: xs. *)
+Proof.
+  intros.
+  induction l as [ | x xs].
+  - inversion H.
+  - reflexivity.
+Qed.    
+    
+
+(* it's more of an iteration theorem than a fold theorem *)
 Lemma fold_equiv_limited :
   forall (l : Blist) (acc : Blist)
          (L : list int) (ACC : list int),
@@ -811,7 +824,7 @@ Proof.
   intros l acc L ACC byte_len inputs_eq acc_eq.
 
   pose proof hash_block_equiv as hash_block_equiv.
-
+  
   destruct byte_len.
   
   revert l L acc ACC H acc_eq inputs_eq.
@@ -823,12 +836,71 @@ Proof.
   (* replace ((bytesToBits @ SHA256.intlist_to_Zlist) []) with *)
   (* (bytesToBits @ SHA256.intlist_to_Zlist) *)
   (* simpl in inputs_eq. *)
-  admit.
-  (* prove that about l *)
-  
-  (* length of msg *)
-  rewrite -> SHA256.hash_blocks_equation.
-  rewrite -> hash_blocks_bits_equation.
+  -
+    simpl in inputs_eq.
+    rewrite -> inputs_eq.
+    rewrite -> SHA256.hash_blocks_equation.
+    rewrite -> hash_blocks_bits_equation.
+    apply acc_eq.
+
+  -
+    (* H doesn't say where the length is added (front, back, every other element... *)
+    (* need Datatypes.length l = (S x * 512)%nat *)
+    rewrite -> SHA256.hash_blocks_equation.
+    rewrite -> hash_blocks_bits_equation.
+    (* there's an extra conversion to/from in hash_block_equiv *)
+    repeat rewrite -> length_not_emp. (* induction step *)
+    specialize (hash_block_equiv (firstn 512 l) (SHA256.intlist_to_Zlist (firstn 16 L))
+                                 acc ACC).
+    rewrite -> hash_block_equiv.
+    rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
+
+    rewrite -> SHA256.hash_blocks_equation.
+    rewrite -> hash_blocks_bits_equation.
+   (* here: they're equivalent for equiv block lengths (look at the respective []) (512, 16)
+       and if there is another block, 
+
+*)
+    assert (H_skip_bit : forall {A : Type} (x y : A),
+                       match skipn 512 l with | [] => x | _ => y end = y). admit.
+    assert (H_skip_byte : forall {A : Type} (x y : A),
+                       match skipn 16 L with | [] => x | _ => y end = y). admit.
+    rewrite -> H_skip_bit. rewrite -> H_skip_byte.
+    clear H_skip_bit H_skip_byte IHx hash_block_equiv. (* TODO *)
+
+    * pose proof hash_block_equiv as hash_block_equiv.
+      specialize (hash_block_equiv
+                       (firstn 512 (skipn 512 l))
+                        (SHA256.intlist_to_Zlist (firstn 16 (skipn 16 L)))
+                        (bytesToBits
+                           (SHA256.intlist_to_Zlist (SHA256.hash_block ACC (firstn 16 L))))
+                        (SHA256.hash_block ACC (firstn 16 L))
+                     
+                 ).
+      rewrite -> hash_block_equiv.
+      rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
+      (* same accumulated inner structure! *)
+    
+    (* unfold sha_h. *)
+    (* maybe what I want is an equivalence between hash_blocks and hash_blocks_bits *)
+    
+    (*
+   convert = bytesToBits @ SHA256.intlist_to_Zlist
+
+   hash_blocks_bits sha_h (convert res) (skipn 512 (convert L)) 
+      =
+   convert ((SHA256.hash_blocks res) (skipn 16 L))
+
+
+
+
+ *)
+
+
+    rewrite -> hash_blocks_bits_equation.
+    
+
+    
 
   (* firstn and skip n lemma *)
 (* SearchAbout firstn. *)
