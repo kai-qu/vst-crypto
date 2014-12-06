@@ -807,7 +807,58 @@ Proof.
   - inversion H.
   - reflexivity.
 Qed.    
-    
+   
+Parameter A B : Type.
+Parameter convert_BA : B -> A.
+Parameter convert_AB : A -> B.
+
+Fixpoint iterate {A : Type} (n : nat) (f : A -> A) (x : A) :=
+  match n with
+    | O => x
+    | S n' => f (iterate n' f x) (* or [iterate n' f (f x)] *)
+  end.
+
+Definition id {X : A} (x : A) : A := x.
+
+Lemma once_eq :
+    forall (x : A) (X : B) (f : A -> A) (F : B -> B),
+      x = convert_BA X ->
+      (* (convert_BA @ convert_AB) = id -> *)
+      f = (convert_BA @ F @ convert_AB) ->
+      f x = convert_BA (F X).
+Proof.
+  intros x X f F inputs_eq f_def.
+  rewrite -> inputs_eq.
+  rewrite -> f_def.
+  replace ((convert_BA @ F @ convert_AB) (convert_BA X)) with
+     (convert_BA (F (convert_AB (convert_BA X)))).
+  replace (convert_AB (convert_BA X)) with (X).
+  reflexivity.
+  -                             (* Id proof *)
+    admit.
+  -                             (* composition *)
+    admit.
+Qed.
+
+(* a simplified version of fold_equiv *)
+Lemma iterate_equiv :
+  forall (x : A) (X : B) (f : A -> A) (F : B -> B) (n : nat),
+  x = convert_BA X ->
+  iterate n f x = convert_BA (iterate n F X).
+Proof.
+  intros. revert x X f F H.
+  induction n as [ | n']; intros x X f F input_eq.
+  - 
+    simpl. apply input_eq.
+  - 
+    simpl.
+    pose proof once_eq as once_eq.
+    apply once_eq.
+    apply IHn'.
+    apply input_eq.
+    *                           (* f is wrapped (here, f is sha_h? *)
+      admit.
+Qed.    
 
 (* it's more of an iteration theorem than a fold theorem *)
 Lemma fold_equiv_limited :
@@ -879,6 +930,7 @@ Proof.
                  ).
       rewrite -> hash_block_equiv.
       rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
+      clear hash_block_equiv.
       (* same accumulated inner structure! *)
     
     (* unfold sha_h. *)
@@ -889,25 +941,15 @@ Proof.
 
    hash_blocks_bits sha_h (convert res) (skipn 512 (convert L)) 
       =
-   convert ((SHA256.hash_blocks res) (skipn 16 L))
-
-
-
-
- *)
+   convert ((SHA256.hash_blocks res) (skipn 16 L)) *)
 
 
     rewrite -> hash_blocks_bits_equation.
     
 
-    
-
-  (* firstn and skip n lemma *)
+    (* firstn and skip n lemma *)
 (* SearchAbout firstn. *)
   
-  Check SHA256.hash_blocks_equation.
-  
-
 
 (* prove by inducting in blocks *)
   
