@@ -18,9 +18,12 @@ Require Import hmac_common_lemmas.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Strings.String.
 
+Require Import XorCorrespondence.
+
 Require Import List. Import ListNotations.
 
-Definition Blist := list bool.
+(* In XorCorrespondence *)
+(* Definition Blist := list bool. *)
 
 Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
 Notation "f @ g" := (compose f g) (at level 80, right associativity).
@@ -64,7 +67,7 @@ Proof. intros.
 Admitted.
 (* Defined. *)
 (* TODO *)
-                                                                                    
+
 
 Section HMAC.
 
@@ -81,7 +84,7 @@ Section HMAC.
   (* The iteration of the compression function gives a keyed hash function on lists of words. *)
   Print fold_left.
   Locate fold_left.
-  
+
   Definition h_star k (m : Blist) :=
     hash_blocks_bits h k m.
   (* The composition of the keyed hash function with the IV gives a hash function on lists of words. *)
@@ -160,13 +163,16 @@ Module Equiv.
 
   (* ----- Inductive *)
 
-Definition asZ (x : bool) : Z := if x then 1 else 0.
+  (* In XorCorrespondence *)
+(* Definition asZ (x : bool) : Z := if x then 1 else 0. *)
 
+(*
 Definition convertByteBits (bits : Blist) (byte : Z) : Prop :=
   exists (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
    bits = [b0; b1; b2; b3; b4; b5; b6; b7] /\
    byte =  (1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
          + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7)).
+*)
 
 Inductive bytes_bits_lists : Blist -> list Z -> Prop :=
   | eq_empty : bytes_bits_lists nil nil
@@ -190,7 +196,7 @@ Definition Z_to_64list (num : Z) : list Z :=
 
 (* bytes to bits *)
 
-(* TODO: assumes Z is positive and in range, does not use Z.positive 
+(* TODO: assumes Z is positive and in range, does not use Z.positive
 -- does this make the following proofs false? *)
 
 Definition div_mod (num : Z) (denom : Z) : bool * Z :=
@@ -262,7 +268,7 @@ Proof.
   unfold bitsToByte.
   (* Opaque asZ. *)
   (* Opaque div_mod. *)
-  
+
   (* destruct b0. *)
 
   (* destruct (byteToBits byte) as *)
@@ -275,12 +281,12 @@ Proof.
 
   (* destruct x0. destruct x1. destruct x2. destruct x3. *)
   (* destruct x4. destruct x5. destruct x6. destruct x7. *)
-  
+
 
 
   (* list needs to be of right length *)
   (* unfold bitsToByte. *)
-  
+
 Admitted.
 
 Theorem bytes_bits_bytes_id : forall (bytes : list Z),
@@ -339,12 +345,12 @@ Proof.
   reflexivity.
 
   admit.
-Qed.  
-  
+Qed.
+
 
 (* binary TODO *)
 (* Definition bit_add (x : Blist) (y : Blist) := *)
-  
+
 
 Close Scope string_scope.
 
@@ -354,7 +360,7 @@ Close Scope string_scope.
 (*                       lower <= upper -> *)
 (*                       lower <= x <= upper -> *)
 (*                       ... *)
-                      
+
 (* TODO: range_proof above, or prove for all things in range *)
 (* need that all bytes are in range *)
 Theorem bytes_bits_def_eq : forall (bytes : list Z),
@@ -376,14 +382,14 @@ Proof.
       split.
       +
         reflexivity.
-      + 
+      +
         assert (byte_range : 0 <= byte < 256). admit.
         assert (byte_val : byte = 200). admit.
         rewrite byte_val.
         simpl.
         reflexivity.
-Qed.      
-      
+Qed.
+
 
 (* not sure which to use / which is true *)
 (* TODO *)
@@ -397,7 +403,7 @@ Proof.
 
   +
     unfold bytesToBits.
-    
+
 
 
 Admitted.
@@ -405,7 +411,7 @@ Admitted.
 Theorem bytes_bits_imp_ok' : forall (bits : Blist) (bytes : list Z),
                            bits = bytesToBits bytes -> bytes_bits_lists bits bytes.
 Proof.
-    
+
 
 
 Admitted.
@@ -477,7 +483,7 @@ Proof.
     + apply IHfst_eq.
       apply snd_eq.
     + apply H.
-Qed.   
+Qed.
 
 (* --------------------------------- *)
 
@@ -496,8 +502,8 @@ Proof.
     subst. reflexivity.
   -
     admit.                      (* TODO *)
-      
-    
+
+
 
 Admitted.
 
@@ -506,10 +512,10 @@ Admitted.
 (* Lemma 2 *)
 
 (* Prove that the inner xor lemma is true on at least one example *)
-Section Example. 
+Section Example.
 
  Definition k:Blist := concat (list_repeat 64 [true; true; false; false; true; false; true; true]).
- Definition K:list Z := list_repeat 64 211. 
+ Definition K:list Z := list_repeat 64 211.
 
  Lemma conv : convertByteBits [true; true; false; false; true; false; true; true] 211.
    repeat eexists.
@@ -519,12 +525,12 @@ Section Example.
  Lemma kKcorrect: bytes_bits_lists k K.
    unfold K, k. simpl.
    repeat constructor; try apply conv.
-  Qed. 
+  Qed.
 
 
  Definition ip:Blist := concat (list_repeat 64 [false; true; false; false; true; false; true; true]).
  Definition IP:Z := 210.
- Transparent Byte.repr. 
+ Transparent Byte.repr.
 
  Lemma ip_conv : convertByteBits [false; true; false; false; true; false; true; true] 210.
    repeat eexists.
@@ -532,76 +538,33 @@ Section Example.
  Lemma ipcorrect: bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP).
    unfold ip, IP. simpl. unfold byte_to_64list, HMAC_SHA256.sixtyfour. simpl.
    repeat constructor; try apply ip_conv.
-  Qed. 
+  Qed.
 
 Lemma ONE: convertByteBits [true; false; false; false; false; false; false; false] 1.
   repeat eexists. Qed.
 
-Lemma inner_fst_equiv_example : exists k (ip  : Blist) K (IP : Z), 
+Lemma inner_fst_equiv_example : exists k (ip  : Blist) K (IP : Z),
                           ((length K) * 8)%nat = (c + p)%nat /\
                           Zlength K = Z.of_nat SHA256_.BlockSize /\
                           (* TODO: first implies this *)
                           bytes_bits_lists k K /\
                           bytes_bits_lists ip (HMAC_SHA256.sixtyfour IP) /\
-                          bytes_bits_lists (BLxor k ip) 
+                          bytes_bits_lists (BLxor k ip)
                                            ((HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) IP)).
 
 Proof.
   exists k, ip, K, IP. repeat split.
-   apply kKcorrect. apply ipcorrect. 
+   apply kKcorrect. apply ipcorrect.
   unfold k, K, ip, IP. simpl. unfold BLxor. simpl.
   repeat constructor; apply ONE.
 Qed.
 
-(* TODO: stuck here *)
-Lemma xor_correspondence :
-  forall (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 : bool)
-         (byte0 byte1 : Z),
-    convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte0 ->
-    convertByteBits [b8; b9; b10; b11; b12; b13; b14; b15] byte1 ->
-
-    convertByteBits
-      [xorb b0 b8; xorb b1 b9; xorb b2 b10; xorb b3 b11; 
-       xorb b4 b12; xorb b5 b13; xorb b6 b14; xorb b7 b15]
-      (Z.lxor byte0 byte1).
-Proof.
-  intros.
-  generalize dependent H. generalize dependent H0. intros H0 H1.
-  unfold convertByteBits. unfold asZ.
-
-  do 8 eexists. split. reflexivity.
-  unfold convertByteBits in *.
-
-  destruct H0 as [ ? [ ? [ ? [ ? [ ? [ ? [ ? [ ? ? ] ] ] ]] ]] ].  (* nested 8 *)
-  destruct H.
-  symmetry in H.
-  inversion H. clear H.
-  subst.
-
-  destruct H1 as [ ? [ ? [ ? [ ? [ ? [ ? [ ? [ ? ? ] ] ] ]] ]] ].  (* nested 8 *)
-  destruct H.
-  symmetry in H.
-  inversion H. clear H.
-  subst.
-
-  unfold asZ.
-
-  (* destruct b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15; reflexivity. *)
-  (* TODO *)
-  
-  (* simpl. *)
-  Print Z.lxor. Print Pos.lxor.
-  SearchAbout Z.lxor.
-  (* need to exhibit b16 ... b23 *)
-   
-
-Admitted.  
-
+(* See XorCorrespondence.v *)
 
 Lemma inner_general_map : forall (ip : Blist) (IP_list : list Z) (k : Blist) (K : list Z),
                             bytes_bits_lists ip IP_list ->
                             bytes_bits_lists k K ->
-     bytes_bits_lists (BLxor k ip) 
+     bytes_bits_lists (BLxor k ip)
                       (map (fun p0 : Z * Z => Z.lxor (fst p0) (snd p0))
                            (combine K IP_list)).
 Proof.
@@ -617,7 +580,7 @@ Proof.
      *)
     (* Eval compute in HMAC_SHA256.sixtyfour []. *)
     induction ip_eq.
-    + 
+    +
       simpl. constructor.
     +
       simpl.
@@ -629,11 +592,11 @@ Proof.
         apply H. apply H0.
 Qed.
 (*
-H : convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte 
+H : convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte
 H0 : convertByteBits [b8; b9; b10; b11; b12; b13; b14; b15] byte0
 
  convertByteBits
-     [xorb b0 b8; xorb b1 b9; xorb b2 b10; xorb b3 b11; 
+     [xorb b0 b8; xorb b1 b9; xorb b2 b10; xorb b3 b11;
      xorb b4 b12; xorb b5 b13; xorb b6 b14; xorb b7 b15]
      (Byte.Z_mod_modulus
         (Z.lxor (Byte.Z_mod_modulus byte) (Byte.Z_mod_modulus byte0)))
@@ -641,7 +604,7 @@ H0 : convertByteBits [b8; b9; b10; b11; b12; b13; b14; b15] byte0
 *)
 
 (*
-Lemma inner_fst_equiv_ipbyte : exists (ip  : Blist) (IP : byte), 
+Lemma inner_fst_equiv_ipbyte : exists (ip  : Blist) (IP : byte),
                           bytes_bits_lists ip (byte_to_64list IP) /\
                       forall (k : Blist) (K : list Z),
                           ((length K) * 8)%nat = (c + p)%nat ->
@@ -653,7 +616,7 @@ Lemma inner_fst_equiv_ipbyte : exists (ip  : Blist) (IP : byte),
 Proof.
   exists ip, IP. repeat split.
   apply ipcorrect.
-  intros. 
+  intros.
   unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkArgZ, HMAC_SHA256.mkKey.
    simpl. rewrite H0. simpl. unfold HMAC_SHA256.zeroPad.
    assert (KL: length K0 = 64%nat). admit.
@@ -664,7 +627,7 @@ Proof.
    (* apply inner_general_map.      *)
 
 Print HMAC_SHA256.mkArg.
-   
+
 Admitted.
 *)
 
@@ -745,9 +708,9 @@ Lemma iterate_equiv :
 Proof.
   intros. revert x X f F H.
   induction n as [ | n']; intros x X f F input_eq.
-  - 
+  -
     simpl. apply input_eq.
-  - 
+  -
     simpl.
     pose proof once_eq as once_eq.
     apply once_eq.
@@ -755,7 +718,7 @@ Proof.
     apply input_eq.
     *                           (* f is wrapped (here, f is sha_h?) *)
       admit.
-Qed.    
+Qed.
 
 (* ----- *)
 
@@ -768,7 +731,7 @@ Proof.
   induction l as [ | x xs].
   - inversion H.
   - reflexivity.
-Qed.    
+Qed.
 
 (* TODO: computational correspondence with length *)
 Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
@@ -786,7 +749,7 @@ Proof.
   - reflexivity.
   - instantiate (1 := []). admit.
   - apply list_nil.
-Qed.  
+Qed.
 
 Lemma splitandpad_equiv : forall (bits : Blist) (bytes : list Z),
                             bytes_bits_lists bits bytes ->
@@ -824,7 +787,7 @@ Proof.
   unfold sha_h.
   apply f_equal.
   apply f_equal.
-  
+
   rewrite -> regs_eq.
   rewrite -> input_eq.
   rewrite -> bytes_bits_bytes_id.
@@ -833,7 +796,7 @@ Proof.
   reflexivity.
 (* TODO: make sure this proof is right / useful *)
 Qed.
-      
+
 (* it's more of an iteration theorem than a fold theorem *)
 Lemma fold_equiv_blocks :
   forall (l : Blist) (acc : Blist)
@@ -856,12 +819,12 @@ Proof.
   admit.
 
   rewrite -> conv_replace in *.
-  
+
   revert acc ACC L inputs_eq acc_eq bytes_blocks conv_replace.
  (* pose proof hash_block_equiv as hash_block_equiv. *)
-  
+
   induction bit_blocks; intros.
-  * 
+  *
     revert acc ACC inputs_eq acc_eq.
     induction bytes_blocks; intros.
 
@@ -922,7 +885,7 @@ Proof.
         rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
         rewrite -> conv_replace in *.
         reflexivity.
-        { 
+        {
           rewrite -> pure_lemmas.length_intlist_to_Zlist.
           rewrite -> H.
           omega.
@@ -935,18 +898,18 @@ Proof.
        rewrite -> H0. rewrite -> app_length. rewrite -> H. omega.
      +
        rewrite -> H2. rewrite -> app_length. rewrite -> H1. omega.
-Qed.       
+Qed.
 
 (* proof residue
       apply IHbytes_blocks.
 
 - was double induction necessary?
-- what about IHbytes_blocks? 
+- what about IHbytes_blocks?
 - better to rewrite into front and back, then break that up, then apply the *first* induction hypothesis,
   then apply theorem to front
 
 - TODO: prove that they are InBlocks after padding and that front~front0, back~back0
- *)  
+ *)
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                         (* add length assumptions here + intros them *)
@@ -971,7 +934,7 @@ Proof.
     unfold h_star.
 
     Check SHA256.hash_blocks_equation.
-    
+
     pose proof splitandpad_equiv as splitandpad_equiv.
     specialize (splitandpad_equiv bits bytes input_eq).
 
@@ -1018,7 +981,7 @@ Proof.
 
   -
     admit.                      (* TODO: compose lemma (this is fine) *)
-Qed.    
+Qed.
 
 
 (* --------------------------------------- *)
@@ -1052,15 +1015,15 @@ Proof.
 
     (* code repeated between cases here *)
     unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
-    
+
     unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
 
     unfold HMAC_SHA256.outerArg. unfold HMAC_SHA256.innerArg. (* unfold HMAC_SHA256.mkArg. *)
-    
+
     simpl.
 
     apply SHA_equiv_pad.
-    
+
     apply concat_equiv.
     apply xor_equiv_Z; try assumption.
     *
@@ -1070,7 +1033,7 @@ Proof.
       - apply xor_equiv_Z; try assumption.
 
       (* bytes_bits_lists (sha_splitandpad m) M -- TODO  *)
-      (* 
+      (*
 this looks like an actual difference in the specs.
        see HMAC_2K (line 90) in HMAC_spec_harvard_v, or Theorem HMAC_unfold
 
@@ -1080,7 +1043,7 @@ this looks like an actual difference in the specs.
 to make this work, you can either use ^, or use
 hash_words_padded sha_h sha_iv sha_splitandpad
            (BLxor k ip ++ sha_splitandpad m)))
-= 
+=
 hash_words_padded sha_h sha_iv sha_splitandpad
            (BLxor k ip ++ m)))
 
