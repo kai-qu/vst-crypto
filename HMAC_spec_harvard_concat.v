@@ -20,7 +20,11 @@ Require Import Coq.Strings.String.
 
 Require Import List. Import ListNotations.
 
-Definition Blist := list bool.
+Require Import XorCorrespondence.
+
+(* Now in XorCorrespondence
+  Definition Blist := list bool.*)
+
 
 Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
 Notation "f @ g" := (compose f g) (at level 80, right associativity).
@@ -160,6 +164,7 @@ Module Equiv.
 
   (* ----- Inductive *)
 
+(*Now in XorCorrespondence
 Definition asZ (x : bool) : Z := if x then 1 else 0.
 
 Definition convertByteBits (bits : Blist) (byte : Z) : Prop :=
@@ -167,6 +172,7 @@ Definition convertByteBits (bits : Blist) (byte : Z) : Prop :=
    bits = [b0; b1; b2; b3; b4; b5; b6; b7] /\
    byte =  (1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
          + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7)).
+*)
 
 Inductive bytes_bits_lists : Blist -> list Z -> Prop :=
   | eq_empty : bytes_bits_lists nil nil
@@ -553,49 +559,12 @@ Proof.
   repeat constructor; apply ONE.
 Qed.
 
-(* TODO: stuck here *)
-Lemma xor_correspondence :
-  forall (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 : bool)
-         (byte0 byte1 : Z),
-    convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte0 ->
-    convertByteBits [b8; b9; b10; b11; b12; b13; b14; b15] byte1 ->
 
-    convertByteBits
-      [xorb b0 b8; xorb b1 b9; xorb b2 b10; xorb b3 b11; 
-       xorb b4 b12; xorb b5 b13; xorb b6 b14; xorb b7 b15]
-      (Z.lxor byte0 byte1).
-Proof.
-  intros.
-  generalize dependent H. generalize dependent H0. intros H0 H1.
-  unfold convertByteBits. unfold asZ.
 
-  do 8 eexists. split. reflexivity.
-  unfold convertByteBits in *.
-
-  destruct H0 as [ ? [ ? [ ? [ ? [ ? [ ? [ ? [ ? ? ] ] ] ]] ]] ].  (* nested 8 *)
-  destruct H.
-  symmetry in H.
-  inversion H. clear H.
-  subst.
-
-  destruct H1 as [ ? [ ? [ ? [ ? [ ? [ ? [ ? [ ? ? ] ] ] ]] ]] ].  (* nested 8 *)
-  destruct H.
-  symmetry in H.
-  inversion H. clear H.
-  subst.
-
-  unfold asZ.
-
-  (* destruct b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15; reflexivity. *)
-  (* TODO *)
-  
-  (* simpl. *)
-  Print Z.lxor. Print Pos.lxor.
-  SearchAbout Z.lxor.
-  (* need to exhibit b16 ... b23 *)
-   
-
-Admitted.  
+Lemma xorb_rewrite:  forall x y,
+      (if xorb x y then 1 else 0) =
+      Z.lxor (if x then 1 else 0) (if y then 1 else 0).
+Proof. intros. destruct x; destruct y; trivial. Qed.
 
 
 Lemma inner_general_map : forall (ip : Blist) (IP_list : list Z) (k : Blist) (K : list Z),
