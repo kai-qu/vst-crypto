@@ -1,0 +1,174 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% writeLaTeX Example: Academic Paper Template
+%
+% Source: http://www.writelatex.com
+% 
+% Feel free to distribute this example, but please keep the referral
+% to writelatex.com
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% How to use writeLaTeX: 
+%
+% You edit the source code here on the left, and the preview on the
+% right shows you the result within a few seconds.
+%
+% Bookmark this page and share the URL with your co-authors. They can
+% edit at the same time!
+%
+% You can upload figures, bibliographies, custom classes and
+% styles using the files menu.
+%
+% If you're new to LaTeX, the wikibook is a great place to start:
+% http://en.wikibooks.org/wiki/LaTeX
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[twocolumn,showpacs,%
+  nofootinbib,aps,superscriptaddress,%
+  eqsecnum,prd,notitlepage,showkeys,10pt]{revtex4-1}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{dcolumn}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{Formally proving equivalence between abstract and concrete specifications of HMAC}
+\author{Katherine Ye, advised by Andrew Appel}
+\affiliation{Princeton University}
+
+\begin{abstract}
+The OpenSSL implementation of HMAC has been proven to correctly implement its concrete specification. HMAC uses SHA-256 as its hash function, and the SHA-256 program has also been proven to correctly implement its specification. At a higher level, HMAC has been proven "safe to use": an abstract specification of HMAC has been proven to be a pseudo-random function given that its internal hash function is one as well. We bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code is "safe to use."
+\\
+(December 8, 2014)
+
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+
+Motivation and background.
+
+\subsection{Coq}
+
+\subsection{The Merkle-Damgard construction}
+
+\subsection{SHA-256}
+
+\subsection{HMAC}
+
+\subsection{Prior work}
+
+Verification of SHA-256.
+
+\section{The proof of equivalence}
+
+\subsection{The concrete specification}
+
+\subsection{The abstract specification}
+
+It includes the GNMAC/\verb|GHMAC_2K| structures. It leaves the hash function, two padding functions, and the hash function's initialization vector abstract.
+
+\subsection{Instantiating the abstract specification}
+
+We wrap the concrete functions in byteToBit and/or \verb|intlist_to_Zlist| conversion functions. 
+
+\subsection{Proof outline}
+
+The main differences between the specs are that (make a table?)
+\begin{enumerate} 
+\item the abstract spec operates on bits, whereas the concrete spec operates on bytes
+\item the abstract spec uses the dependent type \verb|Bvector n|, which is a bit list of length $n$, whereas the concrete spec uses byte lists and int lists
+\item the abstract spec pads its input twice in an ad-hoc manner, whereas the concrete spec uses the SHA-256 padding function consistently
+\item the SHA-256 concrete spec uses the Z type, whereas the HMAC concrete type uses the byte type, which is Z constrained to be in $[0, 255]$.
+\end{enumerate}
+
+\subsection{Proof techniques}
+
+We reasoned about the bytes/bits proof via the following two frameworks.
+
+\begin{itemize}
+\item (Round-trip and conversion properties. Galois connections or other algebraic structure?)
+\item Wrapped function equivalence on application. Interestingly, we have equivalence when a "round-trip" of composing the two transportation functions results in the identity function.
+\item Wrapped function equivalence on repeated application: depends on the previous one, and is completed by induction on the number of applications. This corresponds to the SHA-256 operation of hashing blocks.
+\end{itemize}
+
+The following techniques may be useful in future equivalence proofs.
+
+\begin{itemize}
+\item Many theorems are true for lists of any length (e.g. some involving map and zip). We found it difficult to do dependent type induction. Instead, we found it easy to prove theorems by induction on a Blist, implying that the list may be any length, then specialize it to \verb|Bvector n|, a Blist of length $n$. 
+\item Likewise, we found it easier to prove theorems about lists of any length (or a certain length given by an assumption), then prove that the functions involved preserve the length. This is equivalent to working with \verb|Bvector n|.
+\item When dealing with lists whose lengths must be a multiple of a block size (e.g. 512 bits or 64 bytes), we found it useful to define an inductive proposition \verb|InWords n l| that would allow one to do proofs by inducting in the block size, cons'ing elements to the front. We then proved this equivalent to the computational version (using the length function).
+\item Likewise, we found it useful to define two things: a function to compute conversions between byte lists and bit lists, and an inductive proposition stating that the lists correspond in this way.
+\item When it comes to theorems that involve tricky math, we exploited the fact that range of a byte is $[0, 255]$ and proved them by brute force instead.
+\end{itemize}
+
+\subsection{Problems encountered}
+
+\begin{itemize}
+\item We found it difficult to work with dependent types, induction, and John Major equality.
+\item We encountered problems converting between many machine representations: byte/Z, byte/bit, int/Z, and even little-endian vs. big-endian.
+\item We did not find much prior work on this sort of equivalence proof, except for related functions in Coq.Strings.Ascii.
+\end{itemize}
+
+\section{The proof of HMAC's safety}
+
+\subsection{Bellare's proof}
+
+(Insert diagram.) 
+(\verb|goo.gl/wK8OXg|)
+\\
+
+Let $f$ be the compression function and $f^*$ the iteration of $f$.
+
+Given the assumption that $f$ is a pseudo-random function (PRF), that implies that $f^*$ is computationally almost universal ($cAU$). $cAU$ is a slightly weaker property than collision-resistant.
+
+The $f^* cAU$ property is used to prove that generalized NMAC (GNMAC) using $f^*$ is a PRF. The GNMAC property is used to prove that generalized HMAC with two keys (\verb|GHMAC_2k|) using $f^*$ is a PRF.
+
+Using that fact and the assumption that $f^*$ is RkA-resistant (?), we prove that GHMAC (single-keyed) using $f^*$ is a PRF. This, plus the fact that the padding function for $f$ is one-to-one, leads finally to the proof that HMAC using $f^*$ is a PRF.
+
+
+
+\subsection{Formalization in Coq}
+
+\section{conclusion}
+
+\subsection{Future work}
+
+
+
+\begin{acknowledgments}
+
+Andrew Appel, Lennart Beringer, Adam Petcher, and Qinxiang Cao.
+
+\end{acknowledgments}
+
+\section{references}
+
+"Verification of SHA-256," Appel (unpublished?)
+
+"New Proofs for NMAC and HMAC: Security without Collision-Resistance," Bellare (1996)
+
+"Keying Hash Functions for Message Authentication," Bellare (2004)
+
+"MCF," Petcher (unpublished?)
+
+"Merkle-Damgard in EasyCrypt," IMDEA
+
+"Certified Programming with Dependent Types," Chlipala
+
+"Software Foundations," Pierce et al.
+
+Coq.Strings.Ascii
+
+\section{appendix}
+
+\subsection{The concrete specification}
+
+\subsection{The abstract specification}
+
+\subsection{Selected theorems and proofs}
+
+\end{document}
