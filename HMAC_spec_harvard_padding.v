@@ -43,7 +43,7 @@ Section HMAC.
       b1 = b2.
 
   Definition hash_words_padded := hash_words ∘ splitAndPad.
-  
+
   (* Variable fpad : Bvector c -> Bvector p. *)
   (* Definition app_fpad (x : Bvector c) : Bvector b := *)
   (*   (Vector.append x (fpad x)). *)
@@ -53,16 +53,16 @@ Section HMAC.
   (* Definition h_star_pad k x := *)
   (*   app_fpad (h_star k x). *)
 
-  (* : Vector.t bool (c + c) -> list (Bvector b) -> Bvector c *)
-  (* Theoretically SHA's splitAndPad would work here, since it would pad it to a list of 
-     exactly one block (since c < b), and then you could take the head of the list. 
-     But splitAndPad is left abstract here.
-
-     Not quite sure what to do with GNMAC. It doesn't show up in my proof.
- *)
+  (* Both GNMAC versions have type Vector.t bool (c + c) -> list (Bvector b) -> Bvector c *)
+  (* Not quite sure what to do with GNMAC. It doesn't show up in my proof. *)
   Definition GNMAC k m :=
     let (k_Out, k_In) := splitVector c c k in
     h k_Out (pad_output_to_blocksize (h_star k_In m)).
+
+  (* Uses existing splitAndPad. Might want to prove that splitAndPad would work here, since it would pad it to a list of exactly one block (since c < b), and then h_star on a list of one block does the same thing as h.  *)
+  Definition GNMAC' k m :=
+    let (k_Out, k_In) := splitVector c c k in
+    h_star k_Out (splitAndPad (Vector.to_list (h_star k_In m))).
 
   (* The "two-key" version of GHMAC and HMAC. *)
   Definition GHMAC_2K (k : Bvector (b + b)) m :=
