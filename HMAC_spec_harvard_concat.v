@@ -17,14 +17,16 @@ Require Import functional_prog.
 Require Import hmac_common_lemmas.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Strings.String.
-
+Require Import SHA256.
 Require Import XorCorrespondence.
+Require Import Bruteforce.
 
 Require Import List. Import ListNotations.
 
 (* In XorCorrespondence *)
 (* Definition Blist := list bool. *)
 
+(* TODO: replace with Coq's built-in compose *)
 Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
 Notation "f @ g" := (compose f g) (at level 80, right associativity).
 
@@ -60,13 +62,10 @@ Function hash_blocks_bits (hash_block_bit : Blist -> Blist -> Blist) (r: Blist)
   | _ => hash_blocks_bits hash_block_bit (hash_block_bit r (firstn 512 msg)) (skipn 512 msg)
   end.
 Proof. intros.
-(*
  destruct (lt_dec (length msg) 512).
  rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
- rewrite skipn_length. simpl; omega. rewrite <- teq; omega. *)
-Admitted.
-(* Defined. *)
-(* TODO *)
+ rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
+Defined.
 
 
 Section HMAC.
@@ -252,42 +251,15 @@ Eval compute in toStr (bytesToBits [127]).
 Eval compute in toStr (bytesToBits [128]).
 Eval compute in toStr (bytesToBits [255]).
 
-(* id for one composition *)
-
-Lemma byte_bit_byte_ex : forall (x : Z), x = 68 -> bitsToByte (byteToBits x) = x.
-Proof. intros. rewrite H. simpl. reflexivity. Qed.
-
-(* can prove by testing all bytes in range... *)
+(* Prove by brute force (test all Z in range) *)
 Theorem byte_bit_byte_id : forall (byte : Z),
                              0 <= byte < 256 ->
                                 bitsToByte (byteToBits byte) = byte.
 Proof.
   intros byte range.
-  destruct range as [lower upper].
-  unfold byteToBits.
-  unfold bitsToByte.
-  (* Opaque asZ. *)
-  (* Opaque div_mod. *)
-
-  (* destruct b0. *)
-
-  (* destruct (byteToBits byte) as *)
-  (*     [ | x0 [ | x1 [ | x2 [ | x3 [ | x4 [ | x5 [ | x6 [ | x7 xs] ] ]  ]  ] ] ] ]. *)
-  (* admit. admit. admit. admit. admit. admit. admit. admit. (* TODO *) *)
-
-  (* unfold bitsToByte. *)
-
-(* need that byte = ... *)
-
-  (* destruct x0. destruct x1. destruct x2. destruct x3. *)
-  (* destruct x4. destruct x5. destruct x6. destruct x7. *)
-
-
-
-  (* list needs to be of right length *)
-  (* unfold bitsToByte. *)
-
-Admitted.
+  do_range range reflexivity.
+Qed.
+(* TODO move this into a different file; takes a while to check *)
 
 Theorem bytes_bits_bytes_id : forall (bytes : list Z),
                                 bitsToBytes (bytesToBits bytes) = bytes.
@@ -384,12 +356,10 @@ Proof.
         reflexivity.
       +
         assert (byte_range : 0 <= byte < 256). admit.
-        assert (byte_val : byte = 200). admit.
-        rewrite byte_val.
-        simpl.
-        reflexivity.
+        (* there might be a list-forall *)
+        do_range byte_range reflexivity.
 Qed.
-
+(* TODO move into new file *)
 
 (* not sure which to use / which is true *)
 (* TODO *)
@@ -408,6 +378,7 @@ Proof.
 
 Admitted.
 
+(* TODO: some of these might imply others, might only need to prove one first *)
 Theorem bytes_bits_imp_ok' : forall (bits : Blist) (bytes : list Z),
                            bits = bytesToBits bytes -> bytes_bits_lists bits bytes.
 Proof.
@@ -497,7 +468,9 @@ Lemma split_append_id : forall {A : Type} (len : nat) (l1 l2 : list A),
 Proof.
   induction len; intros h1 h2 l1 l2.
   -
-    assert (H: forall {A : Type} (l : list A), length l = 0%nat -> l = []). admit.
+    assert (H: forall {A : Type} (l : list A), length l = 0%nat -> l = []).
+      intros. destruct l.
+      reflexivity. inversion H.
     apply H in l1. apply H in l2.
     subst. reflexivity.
   -
@@ -820,9 +793,11 @@ Proof.
 
   rewrite -> conv_replace in *.
 
+  (* subst l. *)
+  
   revert acc ACC L inputs_eq acc_eq bytes_blocks conv_replace.
  (* pose proof hash_block_equiv as hash_block_equiv. *)
-
+  Print InBlocks.
   induction bit_blocks; intros.
   *
     revert acc ACC inputs_eq acc_eq.
