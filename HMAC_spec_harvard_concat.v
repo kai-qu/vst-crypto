@@ -67,6 +67,21 @@ Proof. intros.
  rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
 Defined.
 
+Lemma firstn_exact : 
+  forall {A : Type} (l1 l2 : list A) (n : nat),
+    (length l1 = n)%nat -> firstn n (l1 ++ l2) = l1.
+Proof.
+  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
+  * f_equal. apply IHl1. reflexivity.
+Qed.    
+
+Lemma skipn_exact :
+  forall {A : Type} (l1 l2 : list A) (n : nat),
+    (length l1 = n)%nat -> skipn n (l1 ++ l2) = l2.
+Proof.
+  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
+  * apply IHl1. reflexivity.
+Qed.
 
 Section HMAC.
 
@@ -466,19 +481,18 @@ Lemma split_append_id : forall {A : Type} (len : nat) (l1 l2 : list A),
                                length l1 = len -> length l2 = len ->
                                splitList len len (l1 ++ l2) = (l1, l2).
 Proof.
-  induction len; intros h1 h2 l1 l2.
+  induction len; intros l1 l2 len1 len2.
   -
     assert (H: forall {A : Type} (l : list A), length l = 0%nat -> l = []).
       intros. destruct l.
       reflexivity. inversion H.
-    apply H in l1. apply H in l2.
+    apply H in len1. apply H in len2.
     subst. reflexivity.
   -
-    admit.                      (* TODO *)
-
-
-
-Admitted.
+    unfold splitList.
+    rewrite -> firstn_exact. rewrite -> skipn_exact.
+    * reflexivity. * assumption. * assumption.
+Qed.
 
 (* ------- *)
 
@@ -546,12 +560,7 @@ Proof.
   generalize dependent ip. generalize dependent IP_list.
   induction k_eq; intros.
   - simpl. constructor.
-  - (* unfold byte_to_64list in ip_eq. simpl in ip_eq. *)
-    (* map Byte.unsigned
-           (map ((x,y) -> f x y)
-            (combine (map Byte.repr xs) (map Byte.repr ys)))
-     *)
-    (* Eval compute in HMAC_SHA256.sixtyfour []. *)
+  -
     induction ip_eq.
     +
       simpl. constructor.
@@ -564,45 +573,6 @@ Proof.
         apply xor_correspondence.
         apply H. apply H0.
 Qed.
-(*
-H : convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte
-H0 : convertByteBits [b8; b9; b10; b11; b12; b13; b14; b15] byte0
-
- convertByteBits
-     [xorb b0 b8; xorb b1 b9; xorb b2 b10; xorb b3 b11;
-     xorb b4 b12; xorb b5 b13; xorb b6 b14; xorb b7 b15]
-     (Byte.Z_mod_modulus
-        (Z.lxor (Byte.Z_mod_modulus byte) (Byte.Z_mod_modulus byte0)))
-
-*)
-
-(*
-Lemma inner_fst_equiv_ipbyte : exists (ip  : Blist) (IP : byte),
-                          bytes_bits_lists ip (byte_to_64list IP) /\
-                      forall (k : Blist) (K : list Z),
-                          ((length K) * 8)%nat = (c + p)%nat ->
-                          Zlength K = Z.of_nat SHA256_.BlockSize ->
-                          (* TODO: first implies this *)
-                          bytes_bits_lists k K ->
-                          bytes_bits_lists (BLxor k ip) (map Byte.unsigned
-       (HMAC_SHA256.mkArg (map Byte.repr (HMAC_SHA256.mkKey K)) IP)) .
-Proof.
-  exists ip, IP. repeat split.
-  apply ipcorrect.
-  intros.
-  unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkArgZ, HMAC_SHA256.mkKey.
-   simpl. rewrite H0. simpl. unfold HMAC_SHA256.zeroPad.
-   assert (KL: length K0 = 64%nat). admit.
-   rewrite KL.  simpl.  rewrite app_nil_r.
-   unfold HMAC_SHA256.sixtyfour.
-   (* unfold HMAC_SHA256.Nlist. *)
-
-   (* apply inner_general_map.      *)
-
-Print HMAC_SHA256.mkArg.
-
-Admitted.
-*)
 
 Lemma xor_equiv_Z : forall (xpad  : Blist) (XPAD : Z)
                                            (k : Blist) (K : list Z),
@@ -614,21 +584,20 @@ Lemma xor_equiv_Z : forall (xpad  : Blist) (XPAD : Z)
                           bytes_bits_lists (BLxor k xpad)
        (HMAC_SHA256.mkArg (HMAC_SHA256.mkKey K) XPAD).
 Proof.
-  (* intros xpad XPAD k K. intros xpad_equiv len_k zlen_k k_equiv.   *)
-  (* apply xpadcorrect. *)
-  (* Check xpadcorrect. *)
-  intros.
+  intros xpad XPAD k K.
+  intros xpad_equiv len_k zlen_k k_equiv.
   unfold HMAC_SHA256.mkArg, HMAC_SHA256.mkKey.
   Opaque HMAC_SHA256.sixtyfour.
-   simpl. rewrite H1. simpl. unfold HMAC_SHA256.zeroPad.
-   assert (KL: length K0 = 64%nat). admit.
-   rewrite KL.  simpl.  rewrite app_nil_r.
-   apply inner_general_map.
+  simpl. rewrite zlen_k. simpl. unfold HMAC_SHA256.zeroPad.
+  assert (byte_key_length_blocksize: length K = 64%nat).
+    * unfold p, c in *. simpl in *. omega.
+  *
+    rewrite byte_key_length_blocksize.  simpl.  rewrite app_nil_r.
+    apply inner_general_map.
 
-   - apply H.
-   - apply H2.
+  - apply xpad_equiv.
+  - apply k_equiv.
 Qed.
-
 
 Eval compute in Byte.xor (Byte.repr 0) (Byte.repr 100).
 Eval compute in Byte.xor (Byte.repr 100) (Byte.repr 100).
@@ -670,17 +639,19 @@ Proof.
   -                             (* Id proof *)
     admit.
   -                             (* composition *)
+    (* TODO: function composition *)
     admit.
 Qed.
 
 (* a simplified version of fold_equiv *)
 Lemma iterate_equiv :
   forall (x : A) (X : B) (f : A -> A) (F : B -> B) (n : nat),
-  x = convert_BA X ->
-  iterate n f x = convert_BA (iterate n F X).
+    f = (convert_BA @ F @ convert_AB) ->
+    x = convert_BA X ->
+    iterate n f x = convert_BA (iterate n F X).
 Proof.
-  intros. revert x X f F H.
-  induction n as [ | n']; intros x X f F input_eq.
+  intros. revert x X f F H H0.
+  induction n as [ | n']; intros x X f F func_wrap input_eq.
   -
     simpl. apply input_eq.
   -
@@ -688,9 +659,10 @@ Proof.
     pose proof once_eq as once_eq.
     apply once_eq.
     apply IHn'.
+    apply func_wrap.
     apply input_eq.
-    *                           (* f is wrapped (here, f is sha_h?) *)
-      admit.
+    * 
+      apply func_wrap.
 Qed.
 
 (* ----- *)
@@ -720,7 +692,7 @@ Proof.
   eapply list_block.
   instantiate (1 := list_repeat 512 true).
   - reflexivity.
-  - instantiate (1 := []). admit.
+  - instantiate (1 := []). rewrite -> app_nil_r. reflexivity.
   - apply list_nil.
 Qed.
 
@@ -789,15 +761,13 @@ Proof.
   pose (convert := (bytesToBits @ SHA256.intlist_to_Zlist)).
   assert (conv_replace:
             forall (x : list int), bytesToBits (SHA256.intlist_to_Zlist x) = convert x).
-  admit.
+  admit.                        (* TODO *)
 
   rewrite -> conv_replace in *.
 
   (* subst l. *)
   
   revert acc ACC L inputs_eq acc_eq bytes_blocks conv_replace.
- (* pose proof hash_block_equiv as hash_block_equiv. *)
-  Print InBlocks.
   induction bit_blocks; intros.
   *
     revert acc ACC inputs_eq acc_eq.
@@ -810,38 +780,40 @@ Proof.
 
     -
       rewrite -> H0 in *.
-      inversion inputs_eq.
-      (* impossible, TODO: front is not empty, so intlist_to_Zlist (m ++ l) is not empty *)
-      admit.
+      rewrite <- conv_replace in inputs_eq. 
+      destruct front.
+      { inversion H. }
+      { simpl in inputs_eq. inversion inputs_eq. }
 
   *
-
-    Print InBlocks.
-    (* revert front back full H H0 bit_blocks convert IHbit_blocks acc ACC L *)
-    (*        inputs_eq acc_eq bytes_blocks conv_replace. *)
     revert front back full H H0 bit_blocks convert IHbit_blocks acc ACC
            inputs_eq acc_eq conv_replace.
-    (* TODO *)
     induction bytes_blocks; intros.
 
     -
       simpl in inputs_eq.
       rewrite -> H0 in inputs_eq.
-      (* again, impossible: is not empty *)
-      admit.
-    -
+      rewrite <- conv_replace in inputs_eq.
+      destruct front.
+      { inversion H. }
+      { simpl in inputs_eq. inversion inputs_eq. }
+
+    - 
       rewrite -> SHA256.hash_blocks_equation.
       rewrite -> hash_blocks_bits_equation.
-      repeat rewrite -> length_not_emp. (* induction step, use H and H1 *)
+      repeat rewrite -> length_not_emp.
 
-      (* should it be for all front, back, or just for a particular? *)
       rewrite -> H0.
       rewrite -> H2.
       (* TODO: generalize these (it's true by hyp) *)
-      assert (H_first_512 : firstn 512 (front0 ++ back0) = front0). admit.
-      assert (H_skip_512 : skipn 512 (front0 ++ back0) = back0). admit.
-      assert (H_first_16 : firstn 16 (front ++ back) = front). admit.
-      assert (H_skip_16 : skipn 16 (front ++ back) = back). admit.
+      assert (H_first_512 : firstn 512 (front0 ++ back0) = front0).
+        apply firstn_exact. assumption.
+      assert (H_skip_512 : skipn 512 (front0 ++ back0) = back0).
+        apply skipn_exact. assumption.
+      assert (H_first_16 : firstn 16 (front ++ back) = front).
+        apply firstn_exact. assumption.
+      assert (H_skip_16 : skipn 16 (front ++ back) = back).
+        apply skipn_exact. assumption.
 
       rewrite -> H_first_512.
       rewrite -> H_skip_512.
@@ -921,6 +893,7 @@ Proof.
         unfold pad.
         admit.
        (* might need InWords *)
+       (* probably a subcase of the below proof *)
       *
         (* TODO: check that my new padding func preserves the 16 property *)
         SearchAbout SHA256.hash_blocks.

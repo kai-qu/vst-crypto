@@ -147,6 +147,7 @@ Proof.
    reflexivity.
 Qed.
 
+(* can use extensionality *)
 Theorem pad_compose_equal : forall (msg : list Z),
                               generate_and_pad' msg = generate_and_pad msg.
 Proof.
