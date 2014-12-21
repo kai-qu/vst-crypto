@@ -365,7 +365,7 @@ Qed.
 (* TODO move into new file *)
 
 (* TODO: some of these might imply others, might only need to prove one first *)
-Theorem bytes_bits_imp_ok' : forall (bits : Blist) (bytes : list Z),
+Theorem bytes_bits_comp_ind : forall (bits : Blist) (bytes : list Z),
                                Forall (fun b => 0 <= b < 256) bytes ->
                                bits = bytesToBits bytes ->
                                bytes_bits_lists bits bytes.
@@ -378,7 +378,9 @@ Qed.
 
 (* not sure which to use / which is true. could bytes_byts_def_eq be useful? *)
 (* TODO *)
-Theorem bytes_bits_imp_ok : forall (bits : Blist) (bytes : list Z),
+(* can use the below instead *)
+(*
+Theorem bits_bytes_ind_comp : forall (bits : Blist) (bytes : list Z),
                               Forall (fun b => 0 <= b < 256) bytes ->
                               bytes_bits_lists bits bytes ->
                               bits = bytesToBits bytes.
@@ -406,20 +408,28 @@ Proof.
     assert (range': 0 <= byte < 256). admit.
     
     unfold convertByteBits in *.
+    (* destruct was destructive here -- where did b0... go? *)
+    
+    
     repeat destruct H.
-    rewrite H0. 
+    rewrite H0.                 (* how to relate bn and xn?? *)
 
     (* do_range range' reflexivity. *)
     
 
 Admitted.
+*)
 
-Theorem bytes_bits_imp_other : forall (bits : Blist) (bytes : list Z),
+(* unsure if this one is easier than the previous *)
+Theorem bytes_bits_ind_comp : forall (bits : Blist) (bytes : list Z),
                                  Forall (fun b => 0 <= b < 256) bytes ->
                                  bytes_bits_lists bits bytes ->
                                  bytes = bitsToBytes bits.
 Proof.
   intros bits bytes range corr.
+  
+
+
   
 Admitted.
 
@@ -721,10 +731,17 @@ Proof.
   unfold concat.
   unfold sha_splitandpad.
 
-  apply bytes_bits_imp_ok in inputs_eq.
+  apply bytes_bits_ind_comp in inputs_eq.
   rewrite inputs_eq.
-  rewrite bytes_bits_bytes_id.
   apply bytes_bits_def_eq.
+  admit.                        (* padding preserve in-range *)
+  admit.
+
+  (* apply bits_bytes_ind_comp in inputs_eq. *)
+  (* rewrite inputs_eq. *)
+  (* rewrite bytes_bits_bytes_id. *)
+  (* apply bytes_bits_def_eq. *)
+  (* admit. admit. admit. *)
 Qed.
 
 Lemma hash_block_equiv :
@@ -755,6 +772,7 @@ Proof.
   rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
   reflexivity.
 (* TODO: make sure this proof is right / useful *)
+  admit. admit.                 (* intlist_to_Zlist preserves in-range *)
 Qed.
 
 (* it's more of an iteration theorem than a fold theorem *)
@@ -900,8 +918,10 @@ Proof.
     pose proof splitandpad_equiv as splitandpad_equiv.
     specialize (splitandpad_equiv bits bytes input_eq).
 
-      apply bytes_bits_imp_ok'.
+      apply bytes_bits_comp_ind.
       pose proof fold_equiv_blocks as fold_equiv_blocks. (* delete later *)
+      admit.
+      (* TODO: in-range preserved by hash_blocks and intlist_to_Zlist *)
       apply fold_equiv_blocks.
       *                         (* padding -> blocks of 512 *)
         unfold sha_splitandpad.
@@ -931,15 +951,15 @@ Proof.
 
       * unfold sha_splitandpad.
         rewrite -> pure_lemmas.Zlist_to_intlist_to_Zlist.
-        apply bytes_bits_imp_other in input_eq.
+        f_equal.
+        apply bytes_bits_ind_comp in input_eq.
         rewrite -> input_eq.
         reflexivity.
+        + admit.                (* bytes in range *)
         +
           Print SHA256.WORD.    (* 4 *)
           admit.                        (* padding length lemma *)
-        + Print SHA256.isbyteZ. Print Forall. (* TODO: show each byte is in range *)
-          admit.
-          (* TODO: may need to add a byte in range assumption to several proofs *)
+        + admit.                        (* padding in range *)
 
      * unfold sha_iv. reflexivity.
 
