@@ -1,7 +1,11 @@
-(* Admitted/admitted lemmas:
+(* admits: 16 + 1 (generate_and_pad)
 
-39 - 12 = 27?
- *)
+- bytes/bits
+- generate_and_pad
+- SHA proofs related to generate_and_pad
+- composition
+
+*)
 
 Set Implicit Arguments.
 
@@ -247,11 +251,19 @@ Definition bitsToByte (bits : Blist) : Z :=
 Fixpoint bitsToBytes (bits : Blist) : list Z :=
   match bits with
     | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: xs =>
+      bitsToByte [b0; b1; b2; b3; b4; b5; b6; b7] :: bitsToBytes xs
+    | _ => []
+  end.
+
+Fixpoint bitsToBytes' (bits : Blist) : list Z :=
+  match bits with
+    | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: xs =>
       let byte := 1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
          + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7) in
       byte :: bitsToBytes xs
     | _ => []
   end.
+
 
 Require Import Coq.Strings.Ascii.
 Open Scope string_scope.
@@ -286,23 +298,31 @@ Qed.
 (* TODO move this into a different file; takes a while to check *)
 
 Theorem bytes_bits_bytes_id : forall (bytes : list Z),
+                                Forall (fun b => 0 <= b < 256) bytes ->
                                 bitsToBytes (bytesToBits bytes) = bytes.
 Proof.
-  intros bytes.
+  intros range bytes.
   induction bytes as [ | byte bytes].
   - reflexivity.
-  - unfold bytesToBits.
+  -
+    unfold bytesToBits.
+    fold bytesToBits.
+    unfold byteToBits.
     unfold bitsToBytes.
+    Opaque bitsToByte. Opaque bitsToBytes. Opaque bytesToBits.
+    simpl.
+    Transparent bitsToBytes. fold bitsToBytes.
+    rewrite -> IHbytes.
+    
+    Transparent bitsToByte.
+    unfold bitsToByte. f_equal.
+    apply byte_bit_byte_id.
+    
+    apply H. Transparent bytesToBits.
+Qed.
 
-Admitted.
-
-(* could also do proof by enumeration *)
-Lemma bit_byte_bit_ex : forall (b0 b1 b2 b3 b4 b5 b6 b7 : bool) (x : Blist),
-                          x = [true; true; true; false; true; true; true; true]
-                          -> byteToBits (bitsToByte x) = x.
-Proof. intros. rewrite H. simpl. reflexivity. Qed.
-
-(* conditional id for other composition *)
+(* conditional id for other composition: never used *)
+(*
 Theorem bytes_bits_bytes_id_len : forall (bits : Blist),
                                 (length bits mod 8)%nat = 0%nat ->
                                 bytesToBits (bitsToBytes bits) = bits.
@@ -312,62 +332,23 @@ Proof.
   unfold bitsToBytes.
 
 Admitted.
+*)
 
 (* try proving equivalance on sample function (e.g. byte addition) *)
-
-(* unary *)
-Definition byte_neg (bytes : list Z) : list Z :=
-  map (fun byte => -1 * byte) bytes.
-
-Definition wrap (f : list Z -> list Z) : Blist -> Blist :=
-  bytesToBits @ f @ bitsToBytes.
-
-Definition bit_neg : Blist -> Blist :=
-  wrap byte_neg.
-
-Lemma test_neg : forall (bits : Blist) (bytes : list Z),
-                   bits = [true; true; true; true; true; true; true; true] ->
-                   bytes = [127] -> (* relation *)
-                   bits = bytesToBits bytes ->
-                   bit_neg bits = bytesToBits (byte_neg bytes). (* relation *)
-Proof.
-  intros bits bytes bits_eq bytes_eq input_eq.
-  unfold bit_neg. unfold wrap.
-  replace ((bytesToBits @ byte_neg @ bitsToBytes) bits) with
-  (bytesToBits (byte_neg (bitsToBytes bits))).
-
-  rewrite bits_eq. rewrite bytes_eq.
-  simpl.
-  reflexivity.
-
-  admit.
-Qed.
-
-
-(* binary TODO *)
-(* Definition bit_add (x : Blist) (y : Blist) := *)
-
 
 Close Scope string_scope.
 
 (* ------- *)
 
-(* Lemma range_proof : forall (x : Z) (lower : Z) (upper : Z), *)
-(*                       lower <= upper -> *)
-(*                       lower <= x <= upper -> *)
-(*                       ... *)
-
-(* TODO: range_proof above, or prove for all things in range *)
-(* need that all bytes are in range *)
 Theorem bytes_bits_def_eq : forall (bytes : list Z),
+                              Forall (fun b => 0 <= b < 256) bytes ->
                               bytes_bits_lists (bytesToBits bytes) bytes.
 Proof.
-  intros bytes.
+  intros range bytes.
   induction bytes as [ | byte bytes ].
   -
     simpl. apply eq_empty.
   -
-    Print bytes_bits_lists.
     apply eq_cons.
 
     *
@@ -379,42 +360,67 @@ Proof.
       +
         reflexivity.
       +
-        assert (byte_range : 0 <= byte < 256). admit.
-        (* there might be a list-forall *)
-        do_range byte_range reflexivity.
+        do_range H reflexivity.
 Qed.
 (* TODO move into new file *)
 
-(* not sure which to use / which is true *)
+(* TODO: some of these might imply others, might only need to prove one first *)
+Theorem bytes_bits_imp_ok' : forall (bits : Blist) (bytes : list Z),
+                               Forall (fun b => 0 <= b < 256) bytes ->
+                               bits = bytesToBits bytes ->
+                               bytes_bits_lists bits bytes.
+Proof.
+  intros bits bytes range corr.
+  rewrite -> corr.
+  apply bytes_bits_def_eq.
+  assumption.
+Qed.
+
+(* not sure which to use / which is true. could bytes_byts_def_eq be useful? *)
 (* TODO *)
 Theorem bytes_bits_imp_ok : forall (bits : Blist) (bytes : list Z),
-                           bytes_bits_lists bits bytes -> bits = bytesToBits bytes.
+                              Forall (fun b => 0 <= b < 256) bytes ->
+                              bytes_bits_lists bits bytes ->
+                              bits = bytesToBits bytes.
 Proof.
-  intros.
-  induction H.
+  intros bits bytes range corr.
+  induction corr; intros.
   +
     reflexivity.
 
   +
-    unfold bytesToBits.
+    assert (list_8 : forall {A : Type} (e0 e1 e2 e3 e4 e5 e6 e7 : A) (l : list A),
+                       e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: e7 :: l =
+           [e0; e1; e2; e3; e4; e5; e6; e7] ++ l).
+      reflexivity.
+    simpl.
+    rewrite list_8. 
+    pose (x := [b0; b1; b2; b3; b4; b5; b6; b7]).
+    assert (x_rep : x = [b0; b1; b2; b3; b4; b5; b6; b7]). admit.
+    (* TODO fix this pose. hack to make list_8 work on second one *)
+    rewrite <- x_rep.
+    rewrite list_8.
+    rewrite -> x_rep.
+    rewrite <- IHcorr.
+    f_equal.
+    assert (range': 0 <= byte < 256). admit.
+    
+    unfold convertByteBits in *.
+    repeat destruct H.
+    rewrite H0. 
 
-
-
-Admitted.
-
-(* TODO: some of these might imply others, might only need to prove one first *)
-Theorem bytes_bits_imp_ok' : forall (bits : Blist) (bytes : list Z),
-                           bits = bytesToBits bytes -> bytes_bits_lists bits bytes.
-Proof.
-
-
+    (* do_range range' reflexivity. *)
+    
 
 Admitted.
 
 Theorem bytes_bits_imp_other : forall (bits : Blist) (bytes : list Z),
-                           bytes_bits_lists bits bytes -> bytes = bitsToBytes bits.
+                                 Forall (fun b => 0 <= b < 256) bytes ->
+                                 bytes_bits_lists bits bytes ->
+                                 bytes = bitsToBytes bits.
 Proof.
-
+  intros bits bytes range corr.
+  
 Admitted.
 
 (* ----------------------------------------------- *)
