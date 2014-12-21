@@ -266,6 +266,15 @@ Eval compute in toStr (bytesToBits [127]).
 Eval compute in toStr (bytesToBits [128]).
 Eval compute in toStr (bytesToBits [255]).
 
+Lemma bytes_bits_length : forall (bits : Blist) (bytes : list Z),
+  bytes_bits_lists bits bytes -> length bits = (length bytes * 8)%nat.
+Proof.
+  intros bits bytes corr.
+  induction corr.
+  - reflexivity.
+  - simpl. repeat f_equal. apply IHcorr.
+Qed.
+
 (* Prove by brute force (test all Z in range) *)
 Theorem byte_bit_byte_id : forall (byte : Z),
                              0 <= byte < 256 ->
@@ -924,6 +933,7 @@ Proof.
           admit.                        (* padding length lemma *)
         + Print SHA256.isbyteZ. Print Forall. (* TODO: show each byte is in range *)
           admit.
+          (* TODO: may need to add a byte in range assumption to several proofs *)
 
      * unfold sha_iv. reflexivity.
 
@@ -961,55 +971,45 @@ Proof.
 
   rewrite <- HMAC_abstract. rewrite <- HMAC_concrete.
 
-    (* code repeated between cases here *)
-    unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
+  unfold HMAC. unfold HMAC_SHA256.HMAC. unfold HMAC_SHA256.OUTER. unfold HMAC_SHA256.INNER.
+  unfold HMAC_SHA256.outerArg. unfold HMAC_SHA256.innerArg.
 
-    unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
+  unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
 
-    unfold HMAC_SHA256.outerArg. unfold HMAC_SHA256.innerArg. (* unfold HMAC_SHA256.mkArg. *)
+  simpl.
 
-    simpl.
+  apply SHA_equiv_pad.
+  apply concat_equiv.
+  apply xor_equiv_Z; try assumption.
 
+  *
     apply SHA_equiv_pad.
-
     apply concat_equiv.
-    apply xor_equiv_Z; try assumption.
+
+  - apply xor_equiv_Z; try assumption.
+  - assumption.
+    (* xors preserve length *)
     *
-      apply SHA_equiv_pad.
-      apply concat_equiv.
+      unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
+      rewrite -> combine_length.
+      pose proof bytes_bits_length ops_eq as ops_len.
+      rewrite -> ops_len.
+      pose proof bytes_bits_length padded_keys_eq as keys_len.
+      rewrite -> keys_len.
+      rewrite -> padded_key_len.
+      unfold HMAC_SHA256.sixtyfour.
+      rewrite -> length_list_repeat.
+      reflexivity.
 
-      - apply xor_equiv_Z; try assumption.
-
-      (* bytes_bits_lists (sha_splitandpad m) M -- TODO  *)
-      (*
-this looks like an actual difference in the specs.
-       see HMAC_2K (line 90) in HMAC_spec_harvard_v, or Theorem HMAC_unfold
-
-       is this different from the HMAC paper spec itself?
-       the message can be variable length
-
-to make this work, you can either use ^, or use
-hash_words_padded sha_h sha_iv sha_splitandpad
-           (BLxor k ip ++ sha_splitandpad m)))
-=
-hash_words_padded sha_h sha_iv sha_splitandpad
-           (BLxor k ip ++ m)))
-
-which isn't true due to the nature of the padding function (depends on length of input).
-
-his spec will also have that problem with fpad (it'll need to be a specific fpad:
-10..0[length], at that point should be baked into hash_words as hash_words_padded.
-
-
----
-
-proposed solution: since i've already made many changes,
-and sha_splitandpad is included in hash_words_padded, delete sha_splitandpad, completing the proof
-
-      *)
-      (* - apply splitandpad_equiv. *)
-      - assumption.
-        (* xors preserve length *)
-        * admit.
-        * admit.
+    * 
+      unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
+      rewrite -> combine_length.
+      pose proof bytes_bits_length ips_eq as ips_len.
+      rewrite -> ips_len.
+      pose proof bytes_bits_length padded_keys_eq as keys_len.
+      rewrite -> keys_len.
+      rewrite -> padded_key_len.
+      unfold HMAC_SHA256.sixtyfour.
+      rewrite -> length_list_repeat.
+      reflexivity.
 Qed.
