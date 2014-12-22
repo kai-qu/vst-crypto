@@ -1,9 +1,11 @@
-(* admits: 16 + 1 (generate_and_pad)
+(* admits: 18 + 1 (generate_and_pad)
 
-- bytes/bits
+- front ~ FRONT, back ~ BACK
+
 - generate_and_pad
 - SHA proofs related to generate_and_pad
-- composition
+
+- range: bytes in range, pad + intlist_to_Zlist preserve in range, fix the Forall
 
 *)
 
@@ -25,14 +27,13 @@ Require Import SHA256.
 Require Import XorCorrespondence.
 Require Import Bruteforce.
 
+Require Import Coq.Program.Basics. (* for function composition: ∘ *)
+Local Open Scope program_scope.
+
 Require Import List. Import ListNotations.
 
 (* In XorCorrespondence *)
 (* Definition Blist := list bool. *)
-
-(* TODO: replace with Coq's built-in compose *)
-Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
-Notation "f @ g" := (compose f g) (at level 80, right associativity).
 
 Definition splitList {A : Type} (h : nat) (t : nat) (l : list A) : (list A * list A) :=
   (firstn h l, skipn t l).
@@ -117,7 +118,7 @@ Section HMAC.
   Variable splitAndPad : Blist -> Blist.
 
   Definition hash_words_padded : Blist -> Blist :=
-    hash_words @ splitAndPad.
+    hash_words ∘ splitAndPad.
 
   (* ----- *)
 
@@ -266,6 +267,8 @@ Fixpoint bitsToBytes' (bits : Blist) : list Z :=
 
 
 Require Import Coq.Strings.Ascii.
+Require Import Coq.Program.Tactics.
+
 Open Scope string_scope.
 
 Definition asStr (x : bool) : string := if x then "1" else "0".
@@ -321,21 +324,6 @@ Proof.
     apply H. Transparent bytesToBits.
 Qed.
 
-(* conditional id for other composition: never used *)
-(*
-Theorem bytes_bits_bytes_id_len : forall (bits : Blist),
-                                (length bits mod 8)%nat = 0%nat ->
-                                bytesToBits (bitsToBytes bits) = bits.
-Proof.
-  intros bytes.
-  unfold bytesToBits.
-  unfold bitsToBytes.
-
-Admitted.
-*)
-
-(* try proving equivalance on sample function (e.g. byte addition) *)
-
 Close Scope string_scope.
 
 (* ------- *)
@@ -362,9 +350,7 @@ Proof.
       +
         do_range H reflexivity.
 Qed.
-(* TODO move into new file *)
 
-(* TODO: some of these might imply others, might only need to prove one first *)
 Theorem bytes_bits_comp_ind : forall (bits : Blist) (bytes : list Z),
                                Forall (fun b => 0 <= b < 256) bytes ->
                                bits = bytesToBits bytes ->
@@ -376,50 +362,6 @@ Proof.
   assumption.
 Qed.
 
-(* not sure which to use / which is true. could bytes_byts_def_eq be useful? *)
-(* TODO *)
-(* can use the below instead *)
-(*
-Theorem bits_bytes_ind_comp : forall (bits : Blist) (bytes : list Z),
-                              Forall (fun b => 0 <= b < 256) bytes ->
-                              bytes_bits_lists bits bytes ->
-                              bits = bytesToBits bytes.
-Proof.
-  intros bits bytes range corr.
-  induction corr; intros.
-  +
-    reflexivity.
-
-  +
-    assert (list_8 : forall {A : Type} (e0 e1 e2 e3 e4 e5 e6 e7 : A) (l : list A),
-                       e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: e7 :: l =
-           [e0; e1; e2; e3; e4; e5; e6; e7] ++ l).
-      reflexivity.
-    simpl.
-    rewrite list_8. 
-    pose (x := [b0; b1; b2; b3; b4; b5; b6; b7]).
-    assert (x_rep : x = [b0; b1; b2; b3; b4; b5; b6; b7]). admit.
-    (* TODO fix this pose. hack to make list_8 work on second one *)
-    rewrite <- x_rep.
-    rewrite list_8.
-    rewrite -> x_rep.
-    rewrite <- IHcorr.
-    f_equal.
-    assert (range': 0 <= byte < 256). admit.
-    
-    unfold convertByteBits in *.
-    (* destruct was destructive here -- where did b0... go? *)
-    
-    
-    repeat destruct H.
-    rewrite H0.                 (* how to relate bn and xn?? *)
-
-    (* do_range range' reflexivity. *)
-    
-
-Admitted.
-*)
-
 (* unsure if this one is easier than the previous *)
 Theorem bytes_bits_ind_comp : forall (bits : Blist) (bytes : list Z),
                                  Forall (fun b => 0 <= b < 256) bytes ->
@@ -427,11 +369,25 @@ Theorem bytes_bits_ind_comp : forall (bits : Blist) (bytes : list Z),
                                  bytes = bitsToBytes bits.
 Proof.
   intros bits bytes range corr.
-  
+  induction corr.
+  - reflexivity.
+  -
+    rewrite -> IHcorr.
+    *
+      unfold convertByteBits in H.
+      unfold bitsToBytes.
+      fold bitsToBytes.
+      f_equal.
 
+      assert (range' : 0 <= byte < 256). admit.
 
-  
-Admitted.
+      unfold bitsToByte.
+      Print convertByteBits.
+      destruct_exists. destruct H7. inversion H7.
+      subst. reflexivity.
+
+      * admit.                  (* bytes in range *)
+Qed.
 
 (* ----------------------------------------------- *)
 
@@ -650,33 +606,33 @@ Definition id {X : A} (x : A) : A := x.
 Lemma once_eq :
     forall (x : A) (X : B) (f : A -> A) (F : B -> B),
       x = convert_BA X ->
-      (* (convert_BA @ convert_AB) = id -> *)
-      f = (convert_BA @ F @ convert_AB) ->
+      convert_AB (convert_BA X) = X ->
+      f = convert_BA ∘ F ∘ convert_AB ->
       f x = convert_BA (F X).
 Proof.
-  intros x X f F inputs_eq f_def.
+  intros x X f F inputs_eq roundtrip f_def.
   rewrite -> inputs_eq.
   rewrite -> f_def.
-  replace ((convert_BA @ F @ convert_AB) (convert_BA X)) with
+  change ((convert_BA ∘ F ∘ convert_AB) (convert_BA X)) with
      (convert_BA (F (convert_AB (convert_BA X)))).
-  replace (convert_AB (convert_BA X)) with (X).
+  rewrite -> roundtrip.
   reflexivity.
-  -                             (* Id proof *)
-    admit.
-  -                             (* composition *)
-    (* TODO: function composition *)
-    admit.
 Qed.
+
+Lemma roundtrip :
+  forall (X : B), convert_AB (convert_BA X) = X.
+Proof. Admitted.
 
 (* a simplified version of fold_equiv *)
 Lemma iterate_equiv :
   forall (x : A) (X : B) (f : A -> A) (F : B -> B) (n : nat),
-    f = (convert_BA @ F @ convert_AB) ->
+    f = convert_BA ∘ F ∘ convert_AB ->
     x = convert_BA X ->
+    convert_AB (convert_BA X) = X ->
     iterate n f x = convert_BA (iterate n F X).
 Proof.
-  intros. revert x X f F H H0.
-  induction n as [ | n']; intros x X f F func_wrap input_eq.
+  intros. revert x X f F H H0 H1.
+  induction n as [ | n']; intros x X f F func_wrap input_eq roundtrip'.
   -
     simpl. apply input_eq.
   -
@@ -686,8 +642,11 @@ Proof.
     apply IHn'.
     apply func_wrap.
     apply input_eq.
-    * 
-      apply func_wrap.
+    *
+      apply roundtrip'.
+    *
+      apply roundtrip.
+    * apply func_wrap.
 Qed.
 
 (* ----- *)
@@ -736,19 +695,11 @@ Proof.
   apply bytes_bits_def_eq.
   admit.                        (* padding preserve in-range *)
   admit.
-
-  (* apply bits_bytes_ind_comp in inputs_eq. *)
-  (* rewrite inputs_eq. *)
-  (* rewrite bytes_bits_bytes_id. *)
-  (* apply bytes_bits_def_eq. *)
-  (* admit. admit. admit. *)
 Qed.
 
 Lemma hash_block_equiv :
   forall (bits : Blist) (bytes : list Z)
          (regs : Blist) (REGS : SHA256.registers),
-                     (* can't induct
-(not true for registers of any length), use computational instead *)
     (length bits)%nat = 512%nat ->
     (length bytes)%nat = 64%nat -> (* removes firstn 16 (Zlist->intlist bytes) *)
 
@@ -791,10 +742,10 @@ Lemma fold_equiv_blocks :
 Proof.
   intros l acc L ACC bit_blocks bytes_blocks inputs_eq acc_eq.
 
-  pose (convert := (bytesToBits @ SHA256.intlist_to_Zlist)).
+  remember (bytesToBits ∘ SHA256.intlist_to_Zlist) as convert.
   assert (conv_replace:
             forall (x : list int), bytesToBits (SHA256.intlist_to_Zlist x) = convert x).
-  admit.                        (* TODO *)
+    rewrite -> Heqconvert. reflexivity.
 
   rewrite -> conv_replace in *.
 
@@ -820,8 +771,9 @@ Proof.
 
   *
     revert front back full H H0 bit_blocks convert IHbit_blocks acc ACC
-           inputs_eq acc_eq conv_replace.
+           inputs_eq acc_eq conv_replace Heqconvert.
     induction bytes_blocks; intros.
+    (* TODO: clear IHbytes_blocks *)
 
     -
       simpl in inputs_eq.
@@ -871,6 +823,10 @@ Proof.
           omega.
         }
         {
+          rewrite -> conv_replace.
+          apply acc_eq.
+        } 
+        {
           (* TODO: prove the fronts are equivalent *)
           admit.
         }
@@ -904,7 +860,7 @@ Proof.
   rewrite -> functional_prog.SHA_256'_eq.
   unfold SHA256.SHA_256.
   unfold hash_words_padded.
-  replace ((hash_words sha_h sha_iv @ sha_splitandpad) bits) with
+  change ((hash_words sha_h sha_iv ∘ sha_splitandpad) bits) with
   (hash_words sha_h sha_iv (sha_splitandpad bits)).
 
   -
@@ -962,9 +918,6 @@ Proof.
         + admit.                        (* padding in range *)
 
      * unfold sha_iv. reflexivity.
-
-  -
-    admit.                      (* TODO: compose lemma (this is fine) *)
 Qed.
 
 
