@@ -1,0 +1,131 @@
+Set Implicit Arguments.
+
+Require Import Bvector.
+Require Import List.
+Require Import Arith.
+
+Require Import HMAC_functional_prog.
+Require Import Integers.
+Require Import Coqlib.
+Require Import sha_padding_lemmas.
+Require Import functional_prog.
+
+(* Require Import List. Import ListNotations. *)
+
+Definition Blist := list bool.
+
+Fixpoint splitVector (A : Set) (n m : nat) :
+  Vector.t A (n + m) -> (Vector.t A n * Vector.t A m) :=
+  match n with
+    | 0%nat =>
+      fun (v : Vector.t A (O + m)) => (@Vector.nil A, v) (* TODO *)
+    | S n' =>
+      fun (v : Vector.t A (S n' + m)) =>
+        let (v1, v2) := splitVector _ _ (Vector.tl v) in
+          (Vector.cons _ (Vector.hd v) _ v1, v2)
+  end.
+
+Definition concatToList (n m : nat) (v1 : Bvector n) (v2 : Bvector m) : Blist :=
+  Vector.to_list v1 ++ Vector.to_list v2.
+
+Definition compose {A B C : Type} (f : B -> C) (g : A -> B) (x : A) := f (g x).
+Notation "f @ g" := (compose f g) (at level 80, right associativity).
+
+Section HMAC.
+
+(* b = block size
+   c = digest (output) size
+   p = padding = b - c (fixed) *)
+  Variable c p : nat.
+  Definition b := (c + p)%nat.
+
+  (* The compression function *)
+  Variable h : Bvector c -> Bvector b -> Bvector c.
+  (* The initialization vector is part of the spec of the hash function. *)
+  Variable iv : Bvector c.
+  (* The iteration of the compression function gives a keyed hash function on lists of words. *)
+  Definition h_star k (m : list (Bvector b)) :=
+    fold_left h m k.
+  (* The composition of the keyed hash function with the IV gives a hash function on lists of words. *)
+  Definition hash_words := h_star iv.
+
+  Check hash_words.
+  Check h_star.
+
+  Variable splitAndPad : Blist -> list (Bvector b).
+
+  Definition hash_words_padded : Blist -> Bvector c :=
+    hash_words @ splitAndPad.
+
+(* New design:
+
+hash_words : list (Bvector b) -> Bvector c
+
+split_and_pad : Blist -> list (Bvector b)
+
+hash_words_padded : Blist -> Bvector c
+   hash_words_padded := hash_words . split_and_pad
+
+concatToList : Bvector n -> Bvector m -> Blist
+
+(p, fpad, app_fpad removed; c <= b)
+
+In line 3 of GHMAC_2K:
+hash_words_padded (concatToList k_out h_in 
+
+GNMAC? *)
+
+  Hypothesis splitAndPad_1_1 :
+    forall b1 b2,
+      splitAndPad b1 = splitAndPad b2 ->
+      b1 = b2.
+
+  (* constant-length padding. *)
+  Variable fpad : Bvector p.
+
+  Definition app_fpad (x : Bvector c) : Bvector b :=
+    (Vector.append x fpad).
+  Definition h_star_pad k x :=
+    app_fpad (h_star k x).
+
+  (* TODO fix this *)
+  Definition GNMAC k m :=
+    let (k_Out, k_In) := splitVector c c k in
+    h k_Out (h_star_pad k_In m). (* could take head of list *)
+
+  Check GNMAC. 
+  (* Vector.t bool (c + c) -> list (Bvector b) -> Bvector c *)
+  Check h.
+
+Check hash_words.
+
+  (* The "two-key" version of GHMAC and HMAC. *)
+  (* Concatenate (K xor opad) and (K xor ipad) *)
+  Definition GHMAC_2K (k : Bvector (b + b)) m :=
+    let (k_Out, k_In) := splitVector b b k in (* concat earlier, then split *)
+      let h_in := (hash_words (k_In :: m)) in
+        hash_words_padded (concatToList k_Out h_in).
+
+SearchAbout Bvector.
+
+  Definition HMAC_2K (k : Bvector (b + b)) (m : Blist) :=
+    GHMAC_2K k (splitAndPad m).
+
+Check HMAC_2K.
+(* HMAC_2K
+     : Bvector (b + b) -> Blist -> Bvector c *)
+
+(* opad and ipad are constants defined in the HMAC spec. *)
+Variable opad ipad : Bvector b.
+Definition GHMAC (k : Bvector b) :=
+  GHMAC_2K (Vector.append (BVxor _ k opad) (BVxor _ k ipad)).
+
+Print BVxor.
+
+
+Definition HMAC (k : Bvector b) :=
+  HMAC_2K (Vector.append (BVxor _ k opad) (BVxor _ k ipad)).
+
+Check HMAC.                     (*  : Bvector b -> Blist -> Bvector c *)
+
+End HMAC.

@@ -1,0 +1,21 @@
+DIGEST 1ed7496e1b7e6ce05aafb9004acee4d2
+FBruteforce
+R15:20 Coqlib <> <> lib
+R106:110 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R112:115 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R106:110 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R112:115 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R215:217 Coqlib <> zlt def
+R265:268 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R270:272 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R261:263 Coq.ZArith.BinInt <> :Z_scope:x_'+'_x not
+R389:391 Coq.Init.Logic <> :type_scope:x_'='_x not
+prf 440:443 <> test
+R493:495 Coq.ZArith.BinInt <> :Z_scope:x_'>'_x not
+R489:491 Coq.ZArith.BinInt <> :Z_scope:x_'+'_x not
+R488:488 Bruteforce <> i var
+R496:496 Bruteforce <> i var
+R473:476 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R478:480 Coq.ZArith.BinInt <> :Z_scope:x_'<='_x_'<'_x not
+R477:477 Bruteforce <> i var
+R477:477 Bruteforce <> i var

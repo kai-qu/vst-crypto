@@ -2,6 +2,7 @@ Require Import SHA256.
 Require Import pure_lemmas.
 Require Import Coqlib.
 Require Import Integers.
+Require Import HMAC_spec_harvard_concat.
 
 (* Lemma 1: M = Prefix(Pad(M)) *)
 
@@ -44,6 +45,9 @@ Qed.
 
 Print NPeano.div.
 
+(* TODO: what's the relation with total_pad_len_64 (below)?
+also where is the pad definition??
+ *)
 Lemma total_pad_len_Zlist : forall (msg : list Z), 
      length
        (msg ++ [128] ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0)
@@ -131,6 +135,49 @@ Definition pad (msg : list Z) : list Z :=
 
 Definition generate_and_pad' (msg : list Z) : list int :=
   Zlist_to_intlist (pad msg).
+
+(* TODO: total_pad_len_Zlist  *)
+Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
+  | list_nil : InBlocks n []
+  | list_block : forall (front back full : list A),
+                   length front = n ->
+                   full = front ++ back ->
+                   InBlocks n back ->
+                   InBlocks n full. 
+
+SearchAbout roundup.
+Require Import Integers.
+Require Import Coqlib.
+
+Lemma total_pad_len_64 : forall (msg : list Z), exists (n : nat),
+                           length (pad msg) = (n * 64)%nat.
+Proof.
+  intros msg.
+  unfold pad.
+  SearchAbout length.
+  repeat rewrite -> app_length.
+  simpl.
+  assert (succ: forall (n : nat), S n = (n + 1)%nat).
+    intros. induction n. reflexivity. omega.
+  rewrite -> succ.
+  assert ((length msg +
+      (length (list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0%Z) + 8 +
+       1))%nat = (length msg +
+      (length (list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0%Z) + 9))%nat) by omega.
+  rewrite -> H. clear H.
+
+  SearchAbout generate_and_pad.
+  rewrite -> Zlength_correct.
+  rewrite -> length_list_repeat.
+
+  eexists.
+  
+  
+  
+
+
+
+Admitted.
 
 (* C-c C-l *)
 SearchAbout Zlist_to_intlist.

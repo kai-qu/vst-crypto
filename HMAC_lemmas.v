@@ -1,11 +1,11 @@
-Require Import floyd.proofauto. (* TODO *)
+(* Require Import floyd.proofauto. (* TODO *) *)
 
-Import ListNotations.
-Local Open Scope logic.
-Require Import sha.SHA256.
-Require Import sha.spec_sha.
+(* Import ListNotations. *)
+(* Local Open Scope logic. *)
+Require Import SHA256.
+(* Require Import sha.spec_sha. *)
 Require Import sha_lemmas.
-Require Import sha.HMAC_functional_prog.
+Require Import HMAC_functional_prog.
 
 Lemma skipn_app2:
  forall A n (al bl: list A),
@@ -397,7 +397,9 @@ Lemma length_SHA256': forall l,
 Proof. intros. unfold functional_prog.SHA_256'. simpl.
   rewrite length_intlist_to_Zlist, functional_prog.length_process_msg. reflexivity.
 Qed.
- 
+
+(* TODO: move relevant lemmas into a new file *)
+
 Lemma mkKey_length l: length (HMAC_SHA256.mkKey l) = SHA256.BlockSize.
 Proof. intros. unfold HMAC_SHA256.mkKey.
   remember (Zlength l >? Z.of_nat SHA256.BlockSize) as z. 

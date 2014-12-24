@@ -1,12 +1,16 @@
 (* admits: 14 + 1 (generate_and_pad)
 
-- front ~ FRONT, back ~ BACK
+- front ~ FRONT, back ~ BACK <-- have paper proof but am stuck
 
 - generate_and_pad
 - SHA proofs related to generate_and_pad
 - in SHA, need to prove that pad -> InBlocks 512 and pad' -> InBlocks 16
+   - just need to prove InBlocks 64 (pad M), M : list Z
+   - can't use exactly the generate_and_pad proof since it has generate in there,
+     but can modify
 
-- range: bytes in range, pad + intlist_to_Zlist preserve in range, fix the Forall
+- range: bytes in range
+- pad + intlist_to_Zlist preserve in range, fix the Forall
 
 *)
 
@@ -713,6 +717,7 @@ Proof.
 Qed.
 
 (* TODO: computational correspondence with length *)
+(* TODO remove from here; moved to sha_padding_lemmas *)
 Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
   | list_nil : InBlocks n []
   | list_block : forall (front back full : list A),
@@ -806,11 +811,15 @@ Proof.
   x0 :: ... :: x511 :: back = x0' :: ... :: x511' :: convert BACK
 
   BACK is the right length such that the overall lists are the same length
-    why? we know that length (front ++ back) = 32 * length (FRONT ++ BACK)
-  thus, by list equality, xn = xn'
+    why? we know that
+    full = convert FULL so 
+    length (front ++ back) = 32 * length (FRONT ++ BACK)
+  thus, by list equality, xn = xn' (otherwise, contradiction)
 
   x0 :: ... :: x511 = x0' :: ... :: x511'
   front = convert FRONT
+
+and back = convert BACK
 
  *)
 
@@ -864,7 +873,7 @@ and specialize it to being one block
 
 Admitted.
 
-
+(*
 
   (* don't induct on the back blocks -- induction case is unprovable *)
 
@@ -938,7 +947,7 @@ revert front FRONT range f_len F_len concat_eq;
 
 
       
-      
+*)      
     
     
     
@@ -1097,11 +1106,11 @@ Proof.
         rewrite -> H0 in inputs_eq.
         rewrite -> H2 in inputs_eq.
         (* could refactor out the pose/destruct but leaves more stuff in context *)
-        pose proof blocks_equiv front0 back0 front back as blocks_equiv.
-        
-        destruct blocks_equiv.
-        apply inputs_eq.
-        apply H4.
+        (* pose proof blocks_equiv front0 back0 front back as blocks_equiv. *)
+        (* destruct blocks_equiv. *)
+        (* apply inputs_eq. *)
+        (* apply H4. *)
+        admit.
       +
         Check hash_block_equiv.
 
@@ -1120,10 +1129,11 @@ Proof.
           (* TODO: prove the fronts are equivalent *)
           rewrite -> H0 in inputs_eq.
           rewrite -> H2 in inputs_eq.
-          pose proof blocks_equiv front0 back0 front back as blocks_equiv.
-          destruct blocks_equiv.
-          apply inputs_eq.
-          apply H3.
+          (* pose proof blocks_equiv front0 back0 front back as blocks_equiv. *)
+          (* destruct blocks_equiv. *)
+          (* apply inputs_eq. *)
+          (* apply H3. *)
+          admit.
         }
      +
        rewrite -> H0. rewrite -> app_length. rewrite -> H. omega.
@@ -1175,7 +1185,12 @@ Proof.
       (* TODO: in-range preserved by hash_blocks and intlist_to_Zlist *)
       apply fold_equiv_blocks.
       *                         (* padding -> blocks of 512 *)
-        unfold sha_splitandpad.
+        unfold sha_splitandpad in *.
+        apply bytes_bits_length in input_eq.
+        (* pad makes something a multiple of 64 *)
+        (* 8n -> bitsToBytes -> n -> pad -> 64m -> bytesToBits -> 8 * 64m = 512m  *)
+        (* just need to establish that pad does 64m, TODO *)
+
         unfold pad.
         admit.
        (* might need InWords *)
@@ -1201,6 +1216,7 @@ Proof.
         admit.
 
       * unfold sha_splitandpad.
+        unfold convert.
         rewrite -> pure_lemmas.Zlist_to_intlist_to_Zlist.
         f_equal.
         apply bytes_bits_ind_comp in input_eq.
@@ -1208,6 +1224,10 @@ Proof.
         reflexivity.
         + admit.                (* bytes in range *)
         +
+          SearchAbout generate_and_pad.
+          SearchAbout common_lemmas.roundup.
+          Check length_generate_and_pad.
+          Check roundup_divide.
           Print SHA256.WORD.    (* 4 *)
           admit.                        (* padding length lemma *)
         + admit.                        (* padding in range *)
@@ -1287,3 +1307,5 @@ Proof.
       rewrite -> length_list_repeat.
       reflexivity.
 Qed.
+
+End Equiv.

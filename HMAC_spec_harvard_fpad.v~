@@ -488,6 +488,7 @@ Proof.
 
     Admitted.
 
+
 (* TODO: 10/25/14
 
 - add lemma for xor **
@@ -513,36 +514,6 @@ Proof.
 bytes_bits_vector (inductive, returns prop)
 bytes_bits_vector_comp (returns bool)
 bytes_bits_vector_comp' (returns bool) *)
-
-
-Theorem HMAC_unfold : forall
-                            (k m h : list Z)
-                            (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)
-                            (op ip : byte) (OP IP : Bvector (plus c p)),
-  ((length k) * 8)%nat = (c + p)%nat ->
-  bytes_bits_vector k K ->
-  bytes_bits_lists m M ->
-  bytes_bits_conv_vector' op OP ->
-  bytes_bits_conv_vector' ip IP ->
-  HMAC sha_h sha_iv sha_splitandpad_vector fpad OP IP K M = H ->
-  HMAC_SHA256.HMAC op ip m k = h -> (* m k, not k m *)
-  bytes_bits_vector h H.
-Proof.
-  intros k m h K M H op ip OP IP.
-  intros padded_key_len padded_keys_eq msgs_eq ops_eq ips_eq.
-  intros HMAC_abstract HMAC_concrete.
-  unfold p, c in *.
-  simpl in *.
-
-  unfold HMAC in *. simpl in *.
-  rewrite <- HMAC_abstract.
-  unfold HMAC_2K.
-  unfold GHMAC_2K.
-  rewrite -> split_append_id.
-  (* simpl. *)
-
-Abort.
-  
 Theorem HMAC_spec_equiv : forall
                             (k m h : list Z)
                             (K : Bvector (plus c p)) (M : Blist) (H : Bvector c)

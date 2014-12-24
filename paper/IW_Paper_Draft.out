@@ -1,0 +1,26 @@
+\BOOKMARK [0][-]{section*.2}{Formally proving equivalence between abstract and concrete specifications of HMAC}{}% 2
+\BOOKMARK [1][-]{section*.1}{Abstract}{section*.2}% 1
+\BOOKMARK [1][-]{section*.3}{Introduction}{section*.2}% 3
+\BOOKMARK [2][-]{section*.4}{Coq}{section*.3}% 4
+\BOOKMARK [2][-]{section*.5}{The Merkle-Damgard construction}{section*.3}% 5
+\BOOKMARK [2][-]{section*.6}{SHA-256}{section*.3}% 6
+\BOOKMARK [2][-]{section*.7}{HMAC}{section*.3}% 7
+\BOOKMARK [2][-]{section*.8}{Prior work}{section*.3}% 8
+\BOOKMARK [1][-]{section*.9}{The proof of equivalence}{section*.2}% 9
+\BOOKMARK [2][-]{section*.10}{The concrete specification}{section*.9}% 10
+\BOOKMARK [2][-]{section*.11}{The abstract specification}{section*.9}% 11
+\BOOKMARK [2][-]{section*.12}{Instantiating the abstract specification}{section*.9}% 12
+\BOOKMARK [2][-]{section*.13}{Proof outline}{section*.9}% 13
+\BOOKMARK [2][-]{section*.14}{Proof techniques}{section*.9}% 14
+\BOOKMARK [2][-]{section*.15}{Problems encountered}{section*.9}% 15
+\BOOKMARK [1][-]{section*.16}{The proof of HMAC's safety}{section*.2}% 16
+\BOOKMARK [2][-]{section*.17}{Bellare's proof}{section*.16}% 17
+\BOOKMARK [2][-]{section*.18}{Formalization in Coq}{section*.16}% 18
+\BOOKMARK [1][-]{section*.19}{conclusion}{section*.2}% 19
+\BOOKMARK [2][-]{section*.20}{Future work}{section*.19}% 20
+\BOOKMARK [1][-]{section*.21}{Acknowledgments}{section*.2}% 21
+\BOOKMARK [1][-]{section*.22}{references}{section*.2}% 22
+\BOOKMARK [1][-]{section*.23}{appendix}{section*.2}% 23
+\BOOKMARK [2][-]{section*.24}{The concrete specification}{section*.23}% 24
+\BOOKMARK [2][-]{section*.25}{The abstract specification}{section*.23}% 25
+\BOOKMARK [2][-]{section*.26}{Selected theorems and proofs}{section*.23}% 26

@@ -1,0 +1,10 @@
+(* Ltac do_range H tac := *)
+(*   match type of H with *)
+(*     | ?lo <= ?i < ?hi => *)
+(*       try omega; *)
+(*     let *)
+
+
+Lemma test : forall i,
+               0 <= i < 256 -> i + 1 > i.
+Proof.

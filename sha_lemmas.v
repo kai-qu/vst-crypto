@@ -1,9 +1,9 @@
-Add LoadPath "~/Desktop/Code/research/vst/compcert/lib".
-Require Import floyd.proofauto.
-Require Import sha.SHA256.
-Require Import sha.spec_sha.
-Require Import sha.sha.
-Require Export sha.pure_lemmas.
+(* Add LoadPath "~/Desktop/Code/research/vst/compcert/lib". *)
+(* Require Import floyd.proofauto. *)
+Require Import SHA256.
+Require Import spec_sha.
+(* Require Import sha.sha. *)
+Require Export pure_lemmas.
 
 Global Opaque K256.
 

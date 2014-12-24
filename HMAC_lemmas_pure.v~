@@ -1,0 +1,14 @@
+Require Import HMAC_functional_prog.
+
+
+Lemma mkKey_length l: length (HMAC_SHA256.mkKey l) = SHA256.BlockSize.
+Proof. intros. unfold HMAC_SHA256.mkKey.
+  remember (Zlength l >? Z.of_nat SHA256.BlockSize) as z. 
+  destruct z. apply zeroPad_BlockSize.
+    rewrite length_SHA256'.  
+    apply Nat2Z.inj_le. simpl. omega. 
+  apply zeroPad_BlockSize.
+    rewrite Zlength_correct in Heqz. 
+    apply Nat2Z.inj_le. 
+    specialize (Zgt_cases (Z.of_nat (Datatypes.length l)) (Z.of_nat SHA256.BlockSize)). rewrite <- Heqz. trivial.
+Qed.
