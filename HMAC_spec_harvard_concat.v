@@ -785,19 +785,110 @@ Lemma front_equiv :
     Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->
     (length front)%nat = 512%nat ->
     (length FRONT)%nat = 16%nat ->
+    InBlocks 512 front ->
+    InBlocks 16 FRONT ->
     InBlocks 512 back ->
     InBlocks 16 BACK ->         (* shouldn't need these two *)
     front ++ back = convert (FRONT ++ BACK) ->
     front = convert FRONT.
 Proof.
-  intros back BACK front FRONT range f_len F_len bblocks Bblocks concat_eq.
+  intros back BACK front FRONT range f_len F_len fblocks Fblocks bblocks Bblocks concat_eq.
   unfold convert in *.
   rewrite -> pure_lemmas.intlist_to_Zlist_app in concat_eq.
   (* can prove InBlocks 512 (convert (FRONT ++ BACK)) *)
   rewrite -> bytesToBits_app in concat_eq.
+
+  (* but induction on the front needs to be in pairs? can't pair each one-cons
+     somehow have to use InBlocks for both AND the length constraint (each is exactly one block)?
+   *)
+  revert FRONT back BACK Fblocks bblocks Bblocks range f_len F_len concat_eq.
+  induction fblocks; intros.
+  -
+    revert back BACK bblocks Bblocks range f_len F_len concat_eq; induction Fblocks; intros.
+    *
+      reflexivity.
+    *
+      simpl in *.
+      omega.
+  -
+    (* what to induct on here? fronts/backs confusing *)
+    revert back0 back BACK front full fblocks bblocks Bblocks range f_len F_len concat_eq
+           H H0 IHfblocks.
+    (* need to figure out how to name induction *)
+    induction Fblocks.
+    *
+      intros.
+      simpl in *.
+      omega.
+    *
+      (* look at the intros here *)
+      intros.
+      rewrite -> H0 in *.
+      rewrite -> H2 in *.
+      (* frontFinal = front0 ++ back1; FRONTFINAL = front ++ back (confusing...)  *)
+(* need to induct on InBlocks front0 and InBlocks front? (don't actually have that,
+only the lengths *)
+(* wait, consider H1 and f_len..... this is saying that back1 = []?? *)
+
+(* this induction doesn't make any sense since their lengths are fixed.
+maybe i should prove it true for a general
+InBlocks 16 FRONT
+InBlocks 512 front
+length front = 32 * length FRONT
+both fronts are at the fronts of the list
+
+(these are necessary and sufficient assumptions)
+
+and specialize it to being one block
+
+...and then what to do for the back proof?
+
+ *)
+      
+
+Admitted.
+
+
+
+  (* don't induct on the back blocks -- induction case is unprovable *)
+
   revert front FRONT BACK Bblocks range f_len F_len concat_eq.
   induction bblocks; intros. 
+  -
+    revert front FRONT range f_len F_len concat_eq; induction Bblocks; intros.
+    *
+      repeat rewrite -> app_nil_r in concat_eq.
+      apply concat_eq.
+    *
+     rewrite -> app_nil_r in concat_eq.
+     rewrite -> H0 in concat_eq.
+  (* contradiction in length of front0 *)
+     admit.
+  -
+    revert front back full H H0 bblocks IHbblocks front0 FRONT range f_len F_len concat_eq.
+    induction Bblocks; intros.
+    *
+      simpl in concat_eq.
+      rewrite -> app_nil_r in concat_eq.
+      (* contradiction in length of FRONT *)
+      admit.
+    *
+      specialize (IHbblocks front1 FRONT BACK). (* ??? *)
+      apply IHbblocks.
+    (* front1, not front0?? *)
+      + admit.                    (* range *)
+      +
+        rewrite -> H0 in *.
+        rewrite -> H2 in *.
+        (* this isn't right... *)
+        
+        
+      
 
+
+Admitted.      
+    
+    
 
 revert front FRONT range f_len F_len concat_eq;
     induction Bblocks; intros; repeat rewrite -> app_nil_r in *.
