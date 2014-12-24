@@ -1,9 +1,10 @@
-(* admits: 18 + 1 (generate_and_pad)
+(* admits: 14 + 1 (generate_and_pad)
 
 - front ~ FRONT, back ~ BACK
 
 - generate_and_pad
 - SHA proofs related to generate_and_pad
+- in SHA, need to prove that pad -> InBlocks 512 and pad' -> InBlocks 16
 
 - range: bytes in range, pad + intlist_to_Zlist preserve in range, fix the Forall
 
@@ -300,6 +301,16 @@ Proof.
 Qed.
 (* TODO move this into a different file; takes a while to check *)
 
+Theorem bits_byte_bits_id : forall (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
+                              [b0; b1; b2; b3; b4; b5; b6; b7] =
+                              byteToBits (bitsToByte [b0; b1; b2; b3; b4; b5; b6; b7]).
+Proof.
+  intros.
+  destruct b0; destruct b1; destruct b2; destruct b3;
+  destruct b4; destruct b5; destruct b6; destruct b7;
+  reflexivity.
+Qed.
+
 Theorem bytes_bits_bytes_id : forall (bytes : list Z),
                                 Forall (fun b => 0 <= b < 256) bytes ->
                                 bitsToBytes (bytesToBits bytes) = bytes.
@@ -388,6 +399,45 @@ Proof.
 
       * admit.                  (* bytes in range *)
 Qed.
+
+Theorem bits_bytes_ind_comp : forall (bits : Blist) (bytes : list Z),
+                                 Forall (fun b => 0 <= b < 256) bytes ->
+                                 bytes_bits_lists bits bytes ->
+                                 bits = bytesToBits bytes.
+Proof.
+  intros bits bytes range corr.
+  induction corr.
+  - reflexivity.
+  -
+    unfold convertByteBits in H.
+    destruct_exists.
+    destruct H7.
+    inversion H7.
+    subst.
+    clear H7.
+    rewrite -> IHcorr.
+    unfold bytesToBits.
+    fold bytesToBits.
+    assert (list_8 : forall {A : Type} (e0 e1 e2 e3 e4 e5 e6 e7 : A) (l : list A),
+                       e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: e7 :: l =
+                       [e0; e1; e2; e3; e4; e5; e6; e7] ++ l).
+    reflexivity.
+    rewrite -> list_8.
+    f_equal.
+    apply bits_byte_bits_id.
+
+    admit.                      (* in range *)
+Qed.
+
+Lemma bytesToBits_app : forall (l1 l2 : list Z),
+                          bytesToBits (l1 ++ l2) = bytesToBits l1 ++ bytesToBits l2.
+Proof.
+  induction l1; intros.
+  * reflexivity.
+  *
+    simpl. rewrite -> IHl1. reflexivity.
+Qed.    
+
 
 (* ----------------------------------------------- *)
 
@@ -726,6 +776,141 @@ Proof.
   admit. admit.                 (* intlist_to_Zlist preserves in-range *)
 Qed.
 
+Definition convert (l : list int) : list bool :=
+  bytesToBits (SHA256.intlist_to_Zlist l).
+
+Lemma front_equiv :
+  (* forall (front back : Blist) (FRONT BACK : list int), *)
+  forall (back : Blist) (BACK : list int) (front : Blist) (FRONT : list int),
+    Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->
+    (length front)%nat = 512%nat ->
+    (length FRONT)%nat = 16%nat ->
+    InBlocks 512 back ->
+    InBlocks 16 BACK ->         (* shouldn't need these two *)
+    front ++ back = convert (FRONT ++ BACK) ->
+    front = convert FRONT.
+Proof.
+  intros back BACK front FRONT range f_len F_len bblocks Bblocks concat_eq.
+  unfold convert in *.
+  rewrite -> pure_lemmas.intlist_to_Zlist_app in concat_eq.
+  (* can prove InBlocks 512 (convert (FRONT ++ BACK)) *)
+  rewrite -> bytesToBits_app in concat_eq.
+  revert front FRONT BACK Bblocks range f_len F_len concat_eq.
+  induction bblocks; intros. 
+
+
+revert front FRONT range f_len F_len concat_eq;
+    induction Bblocks; intros; repeat rewrite -> app_nil_r in *.
+  -
+    apply concat_eq.
+  -
+    (* take length of each term in concat_eq, rewrite with f_len, contradiction *)
+    admit.
+  -                             (* same as before, contradiction with length FRONT *)
+    admit.
+  -
+    (* don't think this is a very good form for ind hyp? *)
+    specialize (IHback front FRONT BACK).
+    apply IHback; auto.
+    * admit.                    (* range *)
+    *
+      (* inverse induction?? *)
+      (* simpl in concat_eq. *)
+      (* this is not necessarily true?? since we're cons'ing a single element on each one
+         it might be true if back and BACK had some guarantees about their lengths
+         and relative lengths
+
+         weird -- it is true for SOME non-empty backs -- e.g. if we inducted on
+         InBlocks 512 and InBlocks 16
+
+         or maybe it's always false: concat_eq NEVER implies the conclusion
+         so it's not false, but not provable using the given assumption
+         might want to use bytes_bits_lists and inwords and induct / 
+         use properties of bytes_bits_lists to remove the :: and ++
+       *)
+
+
+      
+      
+    
+    
+    
+    
+
+(* is this necessarily true? the other direction is true *)
+Lemma blocks_equiv :
+  forall (front back : Blist) (FRONT BACK : list int),
+    Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->
+    (* TODO: fix proof below *)
+    InBlocks 16 FRONT ->
+    InBlocks 16 BACK ->
+    InBlocks 512 front ->
+    InBlocks 512 back ->
+    front ++ back = convert (FRONT ++ BACK) ->
+    front = convert FRONT /\ back = convert BACK.
+Proof.
+  intros front back FRONT BACK range Fblock Bblock fblock bblock concat_eq.
+  unfold convert in *.
+  split.
+  (* split; apply bits_bytes_ind_comp. *)
+
+  * admit.                      (* range *)
+  *                             (* front *)
+    pose proof bytes_bits_comp_ind range concat_eq as bytes_bits_comp_ind.
+    rewrite -> pure_lemmas.intlist_to_Zlist_app in concat_eq.
+    (* can prove InBlocks 512 (convert (FRONT ++ BACK)) *)
+    rewrite -> pure_lemmas.intlist_to_Zlist_app in bytes_bits_comp_ind.
+    rewrite -> bytesToBits_app in concat_eq.
+
+    revert front back BACK range Bblock fblock bblock concat_eq bytes_bits_comp_ind.
+    induction Fblock; intros.
+    -
+      revert back BACK range Bblock bblock concat_eq bytes_bits_comp_ind0.
+      induction fblock; intros.
+      + 
+        simpl in *.
+        apply concat_eq.
+      +
+        simpl in *.
+        rewrite -> H0 in concat_eq.
+        (* is concat_eq actually going to lead to a contradiction? bad feeling my proof is wrong... *)
+        (* this is actually not true -- need that 32 * length FRONT = length front,
+         likewise for BACK and back -- do i have this in fold_equiv?
+         have concrete lengths (16 and 512) for front, only InBlocks for back...
+         + full0 = convert full
+         so i can prove it for the front, which then implies it for the back
+         (they are not equally easy to prove)
+*)
+
+    (* --- *)
+(*
+
+    (* induction bytes_bits_comp_ind. *)
+    induction fblock.
+    -
+      induction Fblock.
+      + apply eq_empty.
+      +
+        Print InBlocks.
+        simpl in concat_eq.
+        rewrite -> H0 in concat_eq.
+        (* need to do inversion here... *)
+
+        admit.
+        
+        
+      
+  (* rewrite -> bytesToBits_app in concat_eq. *)
+    admit.
+
+  *
+    admit.                      (* range *)
+
+  *
+    admit.
+*)
+Admitted.
+
 (* it's more of an iteration theorem than a fold theorem *)
 Lemma fold_equiv_blocks :
   forall (l : Blist) (acc : Blist)
@@ -735,23 +920,18 @@ Lemma fold_equiv_blocks :
       InBlocks 512 l ->         (* TODO: need to prove padding implies this *)
       (* TODO: need to prove that each block corresponds? applied lemma should ask for that *)
       InBlocks 16 L ->
-      l = bytesToBits (SHA256.intlist_to_Zlist L) ->
-      acc = bytesToBits (SHA256.intlist_to_Zlist ACC) ->
-      hash_blocks_bits sha_h acc l = bytesToBits (SHA256.intlist_to_Zlist
-                                                    (SHA256.hash_blocks ACC L)).
+      l = convert L ->
+      acc = convert ACC ->
+      hash_blocks_bits sha_h acc l = convert (SHA256.hash_blocks ACC L).
 Proof.
   intros l acc L ACC bit_blocks bytes_blocks inputs_eq acc_eq.
 
-  remember (bytesToBits ∘ SHA256.intlist_to_Zlist) as convert.
-  assert (conv_replace:
-            forall (x : list int), bytesToBits (SHA256.intlist_to_Zlist x) = convert x).
-    rewrite -> Heqconvert. reflexivity.
-
-  rewrite -> conv_replace in *.
-
-  (* subst l. *)
+  (* remember (bytesToBits ∘ SHA256.intlist_to_Zlist) as convert. *)
+  (* assert (conv_replace: *)
+  (*           forall (x : list int), bytesToBits (SHA256.intlist_to_Zlist x) = convert x). *)
+  (*   rewrite -> Heqconvert. reflexivity. *)
   
-  revert acc ACC L inputs_eq acc_eq bytes_blocks conv_replace.
+  revert acc ACC L inputs_eq acc_eq bytes_blocks.
   induction bit_blocks; intros.
   *
     revert acc ACC inputs_eq acc_eq.
@@ -764,21 +944,21 @@ Proof.
 
     -
       rewrite -> H0 in *.
-      rewrite <- conv_replace in inputs_eq. 
+      unfold convert in inputs_eq. 
       destruct front.
       { inversion H. }
       { simpl in inputs_eq. inversion inputs_eq. }
 
   *
-    revert front back full H H0 bit_blocks convert IHbit_blocks acc ACC
-           inputs_eq acc_eq conv_replace Heqconvert.
+    revert front back full H H0 bit_blocks IHbit_blocks acc ACC
+           inputs_eq acc_eq.
     induction bytes_blocks; intros.
     (* TODO: clear IHbytes_blocks *)
 
     -
       simpl in inputs_eq.
       rewrite -> H0 in inputs_eq.
-      rewrite <- conv_replace in inputs_eq.
+      unfold convert in inputs_eq.
       destruct front.
       { inversion H. }
       { simpl in inputs_eq. inversion inputs_eq. }
@@ -805,9 +985,16 @@ Proof.
       rewrite -> H_first_16.
       rewrite -> H_skip_16.
 
-      apply IHbit_blocks; auto.
+      apply IHbit_blocks; auto; clear IHbytes_blocks IHbit_blocks.
       +                         (* TODO: backs are equivalent *)
-        admit.
+        rewrite -> H0 in inputs_eq.
+        rewrite -> H2 in inputs_eq.
+        (* could refactor out the pose/destruct but leaves more stuff in context *)
+        pose proof blocks_equiv front0 back0 front back as blocks_equiv.
+        
+        destruct blocks_equiv.
+        apply inputs_eq.
+        apply H4.
       +
         Check hash_block_equiv.
 
@@ -815,7 +1002,7 @@ Proof.
         specialize (hash_block_equiv front0 (SHA256.intlist_to_Zlist front) acc ACC).
         rewrite -> hash_block_equiv; auto. clear hash_block_equiv.
         rewrite -> pure_lemmas.intlist_to_Zlist_to_intlist.
-        rewrite -> conv_replace in *.
+        (* rewrite -> conv_replace in *. *)
         reflexivity.
         {
           rewrite -> pure_lemmas.length_intlist_to_Zlist.
@@ -823,12 +1010,13 @@ Proof.
           omega.
         }
         {
-          rewrite -> conv_replace.
-          apply acc_eq.
-        } 
-        {
           (* TODO: prove the fronts are equivalent *)
-          admit.
+          rewrite -> H0 in inputs_eq.
+          rewrite -> H2 in inputs_eq.
+          pose proof blocks_equiv front0 back0 front back as blocks_equiv.
+          destruct blocks_equiv.
+          apply inputs_eq.
+          apply H3.
         }
      +
        rewrite -> H0. rewrite -> app_length. rewrite -> H. omega.
