@@ -798,6 +798,22 @@ Proof.
   (* can prove InBlocks 512 (convert (FRONT ++ BACK)) *)
   rewrite -> bytesToBits_app in concat_eq.
 
+  (* my proof:
+  concat_eq : front ++ back =
+              bytesToBits (intlist_to_Zlist FRONT) ++
+              bytesToBits (intlist_to_Zlist BACK)
+
+  x0 :: ... :: x511 :: back = x0' :: ... :: x511' :: convert BACK
+
+  BACK is the right length such that the overall lists are the same length
+    why? we know that length (front ++ back) = 32 * length (FRONT ++ BACK)
+  thus, by list equality, xn = xn'
+
+  x0 :: ... :: x511 = x0' :: ... :: x511'
+  front = convert FRONT
+
+ *)
+
   (* but induction on the front needs to be in pairs? can't pair each one-cons
      somehow have to use InBlocks for both AND the length constraint (each is exactly one block)?
    *)
