@@ -18,6 +18,25 @@ Inductive InWords : list Z -> Prop :=
   | words_word : forall (a b c d : Z) (msg : list Z),
                    InWords msg -> InWords (a :: b :: c :: d :: msg).
 
+(* *** New definition for this lemma. *)
+Definition pad (msg : list Z) : list Z := 
+  let n := Zlength msg in
+  msg ++ [128%Z] 
+      ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0
+      ++ intlist_to_Zlist ([Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)]).
+
+Definition generate_and_pad' (msg : list Z) : list int :=
+  Zlist_to_intlist (pad msg).
+
+(* TODO: total_pad_len_Zlist  *)
+Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
+  | list_nil : InBlocks n []
+  | list_block : forall (front back full : list A),
+                   length front = n ->
+                   full = front ++ back ->
+                   InBlocks n back ->
+                   InBlocks n full. 
+
 (* ----------------- ^ Definitions *)
 
 Check NPeano.divide.
@@ -40,34 +59,6 @@ Proof.
   rewrite -> length_list_repeat.
   reflexivity.
 Qed.  
-
-(* Originally from Lemma 2: *)
-
-Print NPeano.div.
-
-(* TODO: what's the relation with total_pad_len_64 (below)?
-also where is the pad definition??
- *)
-Lemma total_pad_len_Zlist : forall (msg : list Z), 
-     length
-       (msg ++ [128] ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0)
-     = (
-         (NPeano.div (Z.to_nat (Zlength msg) + 8) 4%nat + 14%nat)
-          * Z.to_nat WORD
-     )%nat.
-Proof.
-  intros msg.
-  repeat rewrite -> fstpad_len.
-  replace (S (Z.to_nat (- (Zlength msg + 9) mod 64)))
-    with (1 + (Z.to_nat (- (Zlength msg + 9) mod 64)))%nat by omega.
-  
-  (* simpl. *)
-  (* TODO *)
-
-Admitted.
-
-Print NPeano.divide.
-SearchAbout NPeano.divide.
 
 Lemma InWords_len4 : forall (l : list Z),
                        NPeano.divide (Z.to_nat WORD) (length l) -> InWords l.
@@ -92,58 +83,11 @@ Proof.
       simpl. apply H1.
 Qed.  
 
-Lemma pad_inwords :
-  forall (msg : list Z),
-    InWords (msg ++ [128]
-                 ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0).
-Proof.
-  intros msg.
-  apply InWords_len4.
-  pose proof total_pad_len_Zlist.
-  specialize (H msg).
-  unfold NPeano.divide.
-  exists (NPeano.div (Z.to_nat (Zlength msg) + 8) 4 + 14)%nat.
-  apply H.
-Qed.  
+Print NPeano.div.
+Print NPeano.divide.
+SearchAbout NPeano.divide.
 
-Definition fulllen (len : Z) :=
-  len + 1%Z + (- (len + 9) mod 64).
 
-Eval compute in fulllen 0.      (* 56 / 4 = 14 32-bit ints;
-                                   56 + 8 = 64 bytes;
-                                   64 / 4 = 16 32-bit ints;
-                                   16 * 32 = 512 bits; 512 / 256 = 2 blocks of length 256 *)
-Eval compute in fulllen 1.      (* 56 / 4 = 14 *)
-Eval compute in fulllen 2.      (* 56 / 4 = 14 *)
-Eval compute in fulllen 55.      (* 56 / 4 = 14 *)
-Eval compute in fulllen 56.      (* 120 / 4 = 30 *)
-Eval compute in fulllen 119.     (* 120 *)
-Eval compute in fulllen 120.    (* 184 *)
-Eval compute in fulllen 121.
-Eval compute in fulllen 200.    (* 248 + 8 = 256 *)
-
-Eval compute in (-1) mod 5.
-(* SearchAbout modulo. *)
-(* SearchAbout mod. *)
-
-(* *** New definition for this lemma. *)
-Definition pad (msg : list Z) : list Z := 
-  let n := Zlength msg in
-  msg ++ [128%Z] 
-      ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0
-      ++ intlist_to_Zlist ([Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)]).
-
-Definition generate_and_pad' (msg : list Z) : list int :=
-  Zlist_to_intlist (pad msg).
-
-(* TODO: total_pad_len_Zlist  *)
-Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
-  | list_nil : InBlocks n []
-  | list_block : forall (front back full : list A),
-                   length front = n ->
-                   full = front ++ back ->
-                   InBlocks n back ->
-                   InBlocks n full. 
 
 (* TODO: clear out the SearchAbouts / clean up proof *)
 Lemma pad_len_64_mod : forall (msg : list Z), 
@@ -215,7 +159,12 @@ Proof.
   apply H.
 
   *
-    admit.                      (* TODO x >= 0 -- true? necessary? since length & mod > 0 *)
+    admit.
+  (* TODO x >= 0 -- true? necessary? 
+     a >= 0 -> b > 0 -> a mod b = 0 -> exists c, a = b * c, c >= 0
+     by contradiction: already know exists c, a = b * c (c of any sign)
+     if c were negative, then exactly one of a or b would have to be negative
+ *)
   * omega.
 Qed.
 
@@ -249,7 +198,87 @@ Proof.
   * omega.
 Qed.
 
+Lemma total_pad_len_Zlist : forall (msg : list Z), exists (n : nat),
+     length
+       (msg ++ [128] ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0)
+     =  (n * Z.to_nat WORD (* 4 *))%nat.
+Proof.
+  intros msg.
+  pose proof pad_len_64_nat msg as pad_len_64_nat.
 
+  unfold pad in *.
+  repeat rewrite -> app_length in *.
+  destruct pad_len_64_nat.
+  assert (sym: (64 * x)%nat = (x * 64)%nat) by omega.
+  rewrite -> sym in *. clear sym.
+
+  simpl in *.
+  assert (Pos.to_nat 4 = 4%nat) by reflexivity.
+  rewrite -> H0. clear H0.
+
+  rewrite -> length_list_repeat in *.
+
+  assert (add_both: (length msg + S (Z.to_nat (- (Zlength msg + 9) mod 64) ))%nat =
+      (x * 64 - 8)%nat) by omega. clear H.
+  
+  rewrite -> add_both.
+  assert ((x * 64 - 8)%nat = (4 * (16 * x - 2))%nat) by omega.
+
+  rewrite -> H.
+  exists (16 * x - 2)%nat.
+  omega.
+Qed.
+
+Lemma total_pad_len_Zlist' : forall (msg : list Z), 
+     length
+       (msg ++ [128] ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0)
+     = (
+         (NPeano.div (Z.to_nat (Zlength msg) + 8) 4%nat + 14%nat)
+          * Z.to_nat WORD
+     )%nat.
+Proof.
+  intros msg.
+  repeat rewrite -> fstpad_len.
+  replace (S (Z.to_nat (- (Zlength msg + 9) mod 64)))
+    with (1 + (Z.to_nat (- (Zlength msg + 9) mod 64)))%nat by omega.
+  
+  (* simpl. *)
+  (* TODO *)
+
+Admitted.
+
+Lemma pad_inwords :
+  forall (msg : list Z),
+    InWords (msg ++ [128]
+                 ++ list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0).
+Proof.
+  intros msg.
+  apply InWords_len4.
+  pose proof total_pad_len_Zlist.
+  specialize (H msg).
+  unfold NPeano.divide.
+  apply H.
+Qed.  
+
+Definition fulllen (len : Z) :=
+  len + 1%Z + (- (len + 9) mod 64).
+
+Eval compute in fulllen 0.      (* 56 / 4 = 14 32-bit ints;
+                                   56 + 8 = 64 bytes;
+                                   64 / 4 = 16 32-bit ints;
+                                   16 * 32 = 512 bits; 512 / 256 = 2 blocks of length 256 *)
+Eval compute in fulllen 1.      (* 56 / 4 = 14 *)
+Eval compute in fulllen 2.      (* 56 / 4 = 14 *)
+Eval compute in fulllen 55.      (* 56 / 4 = 14 *)
+Eval compute in fulllen 56.      (* 120 / 4 = 30 *)
+Eval compute in fulllen 119.     (* 120 *)
+Eval compute in fulllen 120.    (* 184 *)
+Eval compute in fulllen 121.
+Eval compute in fulllen 200.    (* 248 + 8 = 256 *)
+
+Eval compute in (-1) mod 5.
+(* SearchAbout modulo. *)
+(* SearchAbout mod. *)
 
 (* C-c C-l *)
 SearchAbout Zlist_to_intlist.
@@ -314,43 +343,13 @@ Qed.
 Print NPeano.divide.
 Print NPeano.div.
 Check NPeano.div.
-            
-(* Alternatively, could use my equivalent gap function,
-or the proof about first part *)
-(* see length_Zlist_to_intlist in pure_lemmas *)
-
-Lemma total_pad_len_intlist : forall (msg : list Z),
-      length (generate_and_pad msg) =
-      ((NPeano.div (Z.to_nat (Zlength msg) + 8) 4 + 14)%nat
-      + 2%nat)%nat. (* n + 2 *)
-Proof.  
-  intros msg.
-  remember (NPeano.div (Z.to_nat (Zlength msg) + 8) 4 + 14)%nat as quot.
-  unfold generate_and_pad.
-  rewrite -> app_length.
-  assert (Datatypes.length
-      (Zlist_to_intlist
-         (msg ++
-          128%Z :: list_repeat (Z.to_nat (- (Zlength msg + 9) mod 64)) 0%Z))
-          = quot) as assert_fstlen.
-    apply length_Zlist_to_intlist.
-    rewrite -> mult_comm.
-    rewrite -> Heqquot.
-    apply total_pad_len_Zlist.
-  Opaque NPeano.div.
-  simpl.
-  rewrite -> assert_fstlen.
-  reflexivity.
-Qed.  
-  
+              
 Theorem length_equal_pad_length : forall (msg1 : list Z) (msg2 : list Z),
      Zlength msg1  = Zlength msg2 ->
      Zlength (generate_and_pad msg1) = Zlength (generate_and_pad msg2).
 Proof.
   intros m1 m2 H.
-  SearchAbout Zlength.
-  repeat rewrite -> Zlength_correct.
-  repeat rewrite -> total_pad_len_intlist.
+  repeat rewrite -> functional_prog.length_generate_and_pad.
   rewrite -> H.
   reflexivity.
 Qed.  
@@ -358,7 +357,11 @@ Qed.
 (* ------------------------------------------------ *)
 
 (* Lemma 3: |M1| =/= |M2| ->
-last block of Pad(M1) =/= last block of Pad(M2) *)
+last block of Pad(M1) =/= last block of Pad(M2) 
+
+or, if one-to-one property is desired (for HMAC), only need to prove that
+the padded messages differ
+*)
 
 Definition generate_and_pad_copy msg := 
   let n := Zlength msg in
@@ -369,5 +372,27 @@ Definition generate_and_pad_copy msg :=
 (* Probably easier to use the rewritten version; already "proved"
  that that's in blocks of 4 *)
 
-(* TODO *)
+Theorem length_differ_pad_differ : forall (m1 m2 : list Z),
+                                     Zlength m1 <> Zlength m2 ->
+                                     generate_and_pad m1 <> generate_and_pad m2.
+Proof.
+  intros m1 m2 len_diff.
+  unfold generate_and_pad.
+  
+  
+  SearchAbout ( _ <> _).
+  
+Admitted.
+
+(* TODO prove equivalent to above *)
+Theorem contrapositive_gap : forall (m1 m2 : list Z),
+                                     generate_and_pad m1 = generate_and_pad m2 ->
+                                     Zlength m1 = Zlength m2.
+
+Proof.
+  intros m1 m2 gap_eq.
+  unfold generate_and_pad in *.
+  
+  
+Admitted.
 
