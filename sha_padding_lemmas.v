@@ -145,16 +145,13 @@ Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
                    InBlocks n back ->
                    InBlocks n full. 
 
-SearchAbout roundup.
-Require Import Integers.
-Require Import Coqlib.
-
-Lemma total_pad_len_64 : forall (msg : list Z), exists (n : nat),
-                           length (pad msg) = (n * 64)%nat.
+(* TODO: clear out the SearchAbouts / clean up proof *)
+Lemma pad_len_64_mod : forall (msg : list Z), 
+                           (Zlength (pad msg)) mod 64 = 0.
 Proof.
   intros msg.
   unfold pad.
-  SearchAbout length.
+  rewrite -> Zlength_correct.
   repeat rewrite -> app_length.
   simpl.
   assert (succ: forall (n : nat), S n = (n + 1)%nat).
@@ -170,14 +167,89 @@ Proof.
   rewrite -> Zlength_correct.
   rewrite -> length_list_repeat.
 
-  eexists.
+  SearchAbout Z.of_nat.
+  SearchAbout (Z.of_nat (_ + _)).
+  repeat rewrite -> Nat2Z.inj_add.
+  SearchAbout (Z.of_nat (Z.to_nat _)).
+  rewrite -> Z2Nat.id.
+
+  assert (move : forall (a b c : Z), a + (b + c) = (a + c) + b).
+  intros. omega.
+
+  rewrite -> move.
+  SearchAbout (_ + (_ mod _)).
+  rewrite -> Zplus_mod_idemp_r.
+
+  SearchAbout (_ + (Z.of_nat _)).
+  assert (Z_9 : 9 = Z.of_nat (9%nat)). reflexivity.
+  rewrite -> Z_9.
+
+  repeat rewrite <- Nat2Z.inj_add.
   
-  
-  
+  assert (forall (x : Z), x + (-x) = 0). intros. omega.
+
+  rewrite -> H.
+  reflexivity.
+
+  *
+    SearchAbout (0 <= _ mod _).
+    apply Z.mod_pos_bound.
+    omega.
+Qed.
+
+SearchAbout roundup.
+
+(* more usable versions *)
+Lemma pad_len_64 : forall (msg : list Z), exists (n : Z),
+                           Zlength (pad msg) = 64 * n /\ n >= 0.
+Proof.
+  intros msg.
+  pose proof pad_len_64_mod msg as pad_len_mod.
+
+  SearchAbout (_ mod _).
+  rewrite -> Zmod_divides in *.
+
+  destruct pad_len_mod.
+  exists x.
+  split.
+  apply H.
+
+  *
+    admit.                      (* TODO x >= 0 -- true? necessary? since length & mod > 0 *)
+  * omega.
+Qed.
+
+Lemma pad_len_64_nat : forall (msg : list Z), exists (n : nat),
+                           (length (pad msg))%nat = (64 * n)%nat.
+Proof.
+  intros msg.
+  pose proof pad_len_64 msg as pad_len_64.
+
+  rewrite -> Zlength_correct in *.
+  destruct pad_len_64.
+  exists (Z.to_nat x).
+  destruct H.
+
+  assert (app_each : Z.to_nat (Z.of_nat (length (pad msg))) = Z.to_nat (64 * x)).
+    rewrite -> H. reflexivity.
+
+  SearchAbout (Z.to_nat (Z.of_nat _)).
+
+  rewrite -> Nat2Z.id in app_each.
+
+  rewrite -> app_each.
+  SearchAbout (Z.to_nat (_ * _)).
+  rewrite -> Z2Nat.inj_mul.
+  assert (n_64 : Z.to_nat 64 = 64%nat). reflexivity.
+
+  rewrite -> n_64.
+  reflexivity.
+
+  * omega.
+  * omega.
+Qed.
 
 
-
-Admitted.
 
 (* C-c C-l *)
 SearchAbout Zlist_to_intlist.
