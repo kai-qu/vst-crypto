@@ -1,8 +1,9 @@
-Require Import SHA256.
 Require Import pure_lemmas.
 Require Import Coqlib.
 Require Import Integers.
-Require Import HMAC_spec_harvard_concat.
+(* Require Import HMAC_spec_harvard_concat. *)
+Require Import SHA256.
+Require Import functional_prog.
 
 (* Lemma 1: M = Prefix(Pad(M)) *)
 
@@ -13,6 +14,7 @@ Inductive Prefix {X : Type} : list X -> list X -> Prop :=
   | p_append : forall (l1 l2 : list X) (l3 : list X), Prefix l1 l2 -> Prefix l1 (l2 ++ l3).
   (* | p_trans : forall (l1 l2 l3 : list X), Prefix l1 l2 -> Prefix l2 l3 -> Prefix l1 l2. *)
 
+(* TODO: replace InWords with InBlocks 4? *)
 Inductive InWords : list Z -> Prop :=
   | words_nil : InWords []
   | words_word : forall (a b c d : Z) (msg : list Z),
@@ -82,6 +84,23 @@ Proof.
       simpl in H. inversion H.
       simpl. apply H1.
 Qed.  
+
+Lemma InBlocks_len : forall {A : Type} (l : list A) (n : nat),
+                       NPeano.divide (n) (length l) -> InBlocks n l.
+Proof.
+  intros A l n div.
+  destruct div.
+  revert A l n H.
+  induction x; intros; simpl in *.
+  -
+    admit.
+  -
+    Print InBlocks.
+
+    (* apply list_block. *)
+
+Admitted.
+
 
 Print NPeano.div.
 Print NPeano.divide.

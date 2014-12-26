@@ -1,16 +1,17 @@
-(* admits: 14 + 1 (generate_and_pad)
+(* admits: 14 + 2
 
 - front ~ FRONT, back ~ BACK <-- have paper proof but am stuck
 
-- generate_and_pad
 - SHA proofs related to generate_and_pad
-- in SHA, need to prove that pad -> InBlocks 512 and pad' -> InBlocks 16
-   - just need to prove InBlocks 64 (pad M), M : list Z
-   - can't use exactly the generate_and_pad proof since it has generate in there,
-     but can modify
+   - pushed 2 admits back to sha_padding_lemma (InBlocks corr + positive n)
 
 - range: bytes in range
 - pad + intlist_to_Zlist preserve in range, fix the Forall
+
+------
+
+- modules
+- linking proofs
 
 *)
 
@@ -442,7 +443,16 @@ Proof.
     simpl. rewrite -> IHl1. reflexivity.
 Qed.    
 
-
+Lemma bytesToBits_len : forall (l : list Z),
+                          length (bytesToBits l) = (length l * 8)%nat.
+Proof.
+  induction l; intros; try reflexivity.
+  -
+    simpl.
+    rewrite -> IHl.
+    reflexivity.
+Qed.    
+    
 (* ----------------------------------------------- *)
 
 Check HMAC.
@@ -716,15 +726,7 @@ Proof.
   - reflexivity.
 Qed.
 
-(* TODO: computational correspondence with length *)
-(* TODO remove from here; moved to sha_padding_lemmas *)
-Inductive InBlocks {A : Type} (n : nat) : list A -> Prop :=
-  | list_nil : InBlocks n []
-  | list_block : forall (front back full : list A),
-                   length front = n ->
-                   full = front ++ back ->
-                   InBlocks n back ->
-                   InBlocks n full. (* not easy to do inversion on *)
+(* Definition of InBlocks in sha_padding_lemmas *)
 
 Lemma test : InBlocks 512 (list_repeat 512 true).
 Proof.
@@ -1152,6 +1154,9 @@ Qed.
 - TODO: prove that they are InBlocks after padding and that front~front0, back~back0
  *)
 
+(* TODO remove *)
+Require Import sha_padding_lemmas.
+
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                         (* add length assumptions here + intros them *)
                     bytes_bits_lists bits bytes ->
@@ -1187,33 +1192,29 @@ Proof.
       *                         (* padding -> blocks of 512 *)
         unfold sha_splitandpad in *.
         apply bytes_bits_length in input_eq.
-        (* pad makes something a multiple of 64 *)
-        (* 8n -> bitsToBytes -> n -> pad -> 64m -> bytesToBits -> 8 * 64m = 512m  *)
-        (* just need to establish that pad does 64m, TODO *)
-
-        unfold pad.
-        admit.
-       (* might need InWords *)
-       (* probably a subcase of the below proof *)
+        pose proof pad_len_64_nat (bitsToBytes bits) as pad_len_64.
+        apply InBlocks_len.
+        rewrite -> bytesToBits_len.
+        (* eexists. *)
+        destruct pad_len_64.
+        rewrite -> H.
+        exists x.
+        omega.
       *
-        (* TODO: check that my new padding func preserves the 16 property *)
-        SearchAbout SHA256.hash_blocks.
-        (* see pure_lemmas.length_hash_blocks *)
-        Check pure_lemmas.length_hash_blocks.
-        Print SHA256.LBLOCKz.   (* 16, and registers have length 8 *)
-        SearchAbout SHA256.generate_and_pad.
-        Print common_lemmas.roundup.
-        (* can use length_generate_and_pad if you finish proving them equal *)
-        pose proof sha_padding_lemmas.pad_inwords.
-        unfold pad.
-        (* eapply list_block. *)
-        (* instantiate (1 := ). *)
-        Print SHA256.generate_and_pad.
-        (* 1/4 * 64n = 16n *)
+        pose proof pad_len_64_nat bytes as pad_len_64.
+        apply InBlocks_len.
+        destruct pad_len_64.
 
-        SearchAbout pad.
-        SearchAbout InWords.
-        admit.
+        assert (H' : length (pad bytes) = (Z.to_nat WORD * (16 * x))%nat).
+          rewrite -> H.
+          assert (Z.to_nat WORD = 4%nat) by reflexivity.
+          rewrite -> H0.
+          omega.
+
+        apply pure_lemmas.length_Zlist_to_intlist in H'.
+        rewrite H'.
+        eexists x.
+        omega.
 
       * unfold sha_splitandpad.
         unfold convert.
@@ -1224,12 +1225,13 @@ Proof.
         reflexivity.
         + admit.                (* bytes in range *)
         +
-          SearchAbout generate_and_pad.
-          SearchAbout common_lemmas.roundup.
-          Check length_generate_and_pad.
-          Check roundup_divide.
-          Print SHA256.WORD.    (* 4 *)
-          admit.                        (* padding length lemma *)
+          pose proof pad_len_64_nat bytes as pad_len_64.
+          destruct pad_len_64.
+          rewrite -> H.
+          assert (four : Z.to_nat WORD = 4%nat) by reflexivity.
+          rewrite -> four.
+          exists (x * 16)%nat.
+          omega.
         + admit.                        (* padding in range *)
 
      * unfold sha_iv. reflexivity.
