@@ -86,12 +86,16 @@ TODO: insert diagram of what formal verification means
 Coq has been used to
 
 \subsection{The Merkle-Damgard construction}
-
+% TODO add accent on Damgard
 Say we have a strong cryptographic compression function TODO define. It has certain guarantees. However, it only operates on an input of a fixed length.
 
 The Merkle-Damgard construction (referred to as "M-D" from now on) is a way to extend this function to inputs of any length by iterating the compression function on identically-sized, adjacent blocks of the input. It has been proven to uphold the desirable properties of C such as
 
-Picture here
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale=0.24]{Merkle-Damgard}
+	\caption{The M-D construction.}
+\end{figure}
 
 SHA-256 is an example of an application of M-D.
 
@@ -119,6 +123,12 @@ HMAC's code is: (SHORT CODE HERE)
 
 Mention OpenSSL.
 
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale=0.4]{Cryptosystem}
+	\caption{The entire system. It is slightly more correct to think of a "black box" HMAC taking message and key as input, and outputting the authentication code.}
+\end{figure}
+
 \subsection{Prior work}
 
 Verification of SHA-256.
@@ -144,6 +154,12 @@ Code:
 \subsection{Proof outline}
 
 Equivalence of specs means 
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale=0.56]{Equivalence_proof_chain}
+	\caption{Stages of the equivalence/equality proofs.}
+\end{figure}
 
 The main differences between the specs are that (make a table?)
 \begin{enumerate} 
@@ -183,15 +199,18 @@ The following techniques may be useful in future equivalence proofs.
 
 \section{The proof of HMAC's safety}
 
-\subsection{Bellare's proof}
-
-(Insert diagram.) 
-(\verb|goo.gl/wK8OXg|)
-\\
+\subsection{The 1996 (?) Bellare proof}
 
 Let $f$ be the compression function and $f^*$ the iteration of $f$.
 
 Given the assumption that $f$ is a pseudo-random function (PRF), that implies that $f^*$ is computationally almost universal ($cAU$). $cAU$ is a slightly weaker property than collision-resistant.
+
+% (\verb|goo.gl/wK8OXg|)
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale=0.4]{HMAC_proof}
+	\caption{The structure of the 1996 (? TODO) Bellare HMAC proof.}
+\end{figure}
 
 The $f^* cAU$ property is used to prove that generalized NMAC (GNMAC) using $f^*$ is a PRF. The GNMAC property is used to prove that generalized HMAC with two keys (\verb|GHMAC_2k|) using $f^*$ is a PRF.
 
