@@ -25,6 +25,9 @@
 \documentclass[twocolumn,showpacs,%
   nofootinbib,aps,superscriptaddress,%
   eqsecnum,prd,notitlepage,showkeys,10pt]{revtex4-1}
+  
+\usepackage{graphicx}
+\graphicspath{ {images/} }
 
 \usepackage{amssymb}
 \usepackage{amsmath}
@@ -49,15 +52,24 @@ TODO shorten abstract (December 26, 2014)
 
 \section{Introduction}
 
-This paper will assume introductory knowledge of cryptography and and no knowledge about proof assistants or formal verification.
+Compelling quote or hook here TODO
 
-Compelling quote or hook here
+There exists a gap between mathematical cryptography (rigorous paper proofs of correctness of an algorithm) and applied cryptography (concrete implementations of those algorithms, plus the field of information security). This gap gives us two reasons to be wary. First, the paper proofs may be flawed, leading us to believe that algorithms are "safe to use" when they are not. (TODO example of wrong crypto proof) Second, even if the proofs are right, they are accompanied by a specification of the algorithm only on paper. The concrete code implementing this specification may contain exploitable bugs, allowing hackers to induce buffer overflows, ... TODO (TODO OpenSSL, Heartbleed) 
 
-Bridge the gap between mathematical crypto and applied crypto (information security)
+Recent work aims to close this gap. Barthe (2013, 2014) assert that "cryptographic proofs have become essentially unverifiable," and present CertiCrypt, a framework that "enables the machine-checked
+construction and verification of code-based proofs." This paper continues in the spirit of formal verification. 
 
-Work we have (2 specs, VST edifice)
+At a high level, this work is motivated by two purposes. First, the Verified Software Toolchain project has built the framework to do TODO, and HMAC is a natural extension of the existing SHA-256 work. See Appel 2015 for an explanation of the system. Second, encrypted communications between military robots requires HMAC TODO. 
 
-Diagram of the work of this paper
+Toward this end, we
+
+The rest of this paper assumes introductory knowledge of cryptography and and no knowledge about proof assistants or formal verification.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale=0.35]{Proof_edifice}
+	\caption{Mind the gap (the dotted arrow).}
+\end{figure}	
 
 \subsection{Formal verification in Coq}
 
