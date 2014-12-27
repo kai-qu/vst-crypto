@@ -1,6 +1,7 @@
 (* admits: 14 + 2
 
 - front ~ FRONT, back ~ BACK <-- have paper proof but am stuck
+   - make following code compile
 
 - SHA proofs related to generate_and_pad
    - pushed 2 admits back to sha_padding_lemma (InBlocks corr + positive n)
@@ -18,7 +19,7 @@
 Set Implicit Arguments.
 
 (* Require Import Bvector. *)
-Require Import List.
+Require Import List. Import ListNotations.
 Require Import Arith.
 
 Require Import HMAC_functional_prog_Z.
@@ -28,15 +29,14 @@ Require Import sha_padding_lemmas.
 Require Import functional_prog.
 Require Import hmac_common_lemmas.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
-Require Import Coq.Strings.String.
 Require Import SHA256.
+Require Import ByteBitRelations.
 Require Import XorCorrespondence.
-Require Import Bruteforce.
+Require Import HMAC_functional_prog_Z. (* TODO remove? *)
+(* TODO remove useless imports *)
 
 Require Import Coq.Program.Basics. (* for function composition: ∘ *)
 Local Open Scope program_scope.
-
-Require Import List. Import ListNotations.
 
 (* In XorCorrespondence *)
 (* Definition Blist := list bool. *)
@@ -47,25 +47,9 @@ Definition splitList {A : Type} (h : nat) (t : nat) (l : list A) : (list A * lis
 Definition concat {A : Type} (l : list (list A)) : list A :=
   flat_map id l.
 
-
-(* TODO: length proofs (length xs = length ys) *)
 Definition BLxor (xs : Blist) (ys : Blist) :=
   map (fun p => xorb (fst p) (snd p)) (combine xs ys).
 
-Print fold_left.
-(*
-Function hash_blocks (r: registers) (msg: list int) {measure length msg} : registers :=
-  match msg with
-  | nil => r
-  | _ => hash_blocks (hash_block r (firstn 16 msg)) (skipn 16 msg)
-  end.
-Proof. intros.
- destruct (lt_dec (length msg) 16).
- rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
- rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
-Defined.
-*)
-(* block size 512, possibly use take 512 l instead, though it might be harder to prove things about *)
 Function hash_blocks_bits (hash_block_bit : Blist -> Blist -> Blist) (r: Blist)
          (msg: Blist) {measure length msg} : Blist :=
   match msg with
@@ -182,296 +166,9 @@ Check HMAC.
 
 End HMAC.
 
-(* ----------------------------------- DEFINITIONS *)
-
-Module Equiv.
-
-  (* ----- Inductive *)
-
-  (* In XorCorrespondence *)
-(* Definition asZ (x : bool) : Z := if x then 1 else 0. *)
-
-(*
-Definition convertByteBits (bits : Blist) (byte : Z) : Prop :=
-  exists (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
-   bits = [b0; b1; b2; b3; b4; b5; b6; b7] /\
-   byte =  (1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
-         + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7)).
-*)
-
-Inductive bytes_bits_lists : Blist -> list Z -> Prop :=
-  | eq_empty : bytes_bits_lists nil nil
-  | eq_cons : forall (bits : Blist) (bytes : list Z)
-                     (b0 b1 b2 b3 b4 b5 b6 b7 : bool) (byte : Z),
-                bytes_bits_lists bits bytes ->
-                convertByteBits [b0; b1; b2; b3; b4; b5; b6; b7] byte ->
-                bytes_bits_lists (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits)
-                                 (byte :: bytes).
-
-Definition byte_to_64list (byte : byte) : list Z :=
-   map Byte.unsigned (HMAC_SHA256.sixtyfour byte).
-
-Definition Z_to_64list (num : Z) : list Z :=
-   HMAC_SHA256.sixtyfour num.
-
-(* ----- Computational *)
-
-(* byte = Z (not byte type), bit = bool *)
-(* endianness: TODO *)
-
-(* bytes to bits *)
-
-(* TODO: assumes Z is positive and in range, does not use Z.positive
--- does this make the following proofs false? *)
-
-Definition div_mod (num : Z) (denom : Z) : bool * Z :=
-  (Z.gtb (num / denom) 0, num mod denom).
-
-Eval compute in div_mod 129 128.
-Eval compute in div_mod 1 64.
-
-Definition byteToBits (byte : Z) : Blist :=
-  let (b7, rem7) := div_mod byte 128 in
-  let (b6, rem6) := div_mod rem7 64 in
-  let (b5, rem5) := div_mod rem6 32 in
-  let (b4, rem4) := div_mod rem5 16 in
-  let (b3, rem3) := div_mod rem4 8 in
-  let (b2, rem2) := div_mod rem3 4 in
-  let (b1, rem1) := div_mod rem2 2 in
-  let (b0, rem0) := div_mod rem1 1 in
-  [b0; b1; b2; b3; b4; b5; b6; b7].
-
-Fixpoint bytesToBits (bytes : list Z) : Blist :=
-  match bytes with
-    | [] => []
-    | byte :: xs => byteToBits byte ++ bytesToBits xs
-  end.
-
-Definition bitsToByte (bits : Blist) : Z :=
-  match bits with
-    | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: nil =>
-      1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
-      + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7)
-    | _ => -1                   (* should not happen *)
-  end.
-
-Fixpoint bitsToBytes (bits : Blist) : list Z :=
-  match bits with
-    | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: xs =>
-      bitsToByte [b0; b1; b2; b3; b4; b5; b6; b7] :: bitsToBytes xs
-    | _ => []
-  end.
-
-Fixpoint bitsToBytes' (bits : Blist) : list Z :=
-  match bits with
-    | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: xs =>
-      let byte := 1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
-         + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7) in
-      byte :: bitsToBytes xs
-    | _ => []
-  end.
-
-
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Program.Tactics.
-
-Open Scope string_scope.
-
-Definition asStr (x : bool) : string := if x then "1" else "0".
-
-Definition toStr (bits : Blist) : list string :=
-  map asStr bits.
-
-Eval compute in toStr (bytesToBits [8]).
-Eval compute in toStr (bytesToBits [127]).
-Eval compute in toStr (bytesToBits [128]).
-Eval compute in toStr (bytesToBits [255]).
-
-Lemma bytes_bits_length : forall (bits : Blist) (bytes : list Z),
-  bytes_bits_lists bits bytes -> length bits = (length bytes * 8)%nat.
-Proof.
-  intros bits bytes corr.
-  induction corr.
-  - reflexivity.
-  - simpl. repeat f_equal. apply IHcorr.
-Qed.
-
-(* Prove by brute force (test all Z in range) *)
-Theorem byte_bit_byte_id : forall (byte : Z),
-                             0 <= byte < 256 ->
-                                bitsToByte (byteToBits byte) = byte.
-Proof.
-  intros byte range.
-  do_range range reflexivity.
-Qed.
-(* TODO move this into a different file; takes a while to check *)
-
-Theorem bits_byte_bits_id : forall (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
-                              [b0; b1; b2; b3; b4; b5; b6; b7] =
-                              byteToBits (bitsToByte [b0; b1; b2; b3; b4; b5; b6; b7]).
-Proof.
-  intros.
-  destruct b0; destruct b1; destruct b2; destruct b3;
-  destruct b4; destruct b5; destruct b6; destruct b7;
-  reflexivity.
-Qed.
-
-Theorem bytes_bits_bytes_id : forall (bytes : list Z),
-                                Forall (fun b => 0 <= b < 256) bytes ->
-                                bitsToBytes (bytesToBits bytes) = bytes.
-Proof.
-  intros range bytes.
-  induction bytes as [ | byte bytes].
-  - reflexivity.
-  -
-    unfold bytesToBits.
-    fold bytesToBits.
-    unfold byteToBits.
-    unfold bitsToBytes.
-    Opaque bitsToByte. Opaque bitsToBytes. Opaque bytesToBits.
-    simpl.
-    Transparent bitsToBytes. fold bitsToBytes.
-    rewrite -> IHbytes.
-    
-    Transparent bitsToByte.
-    unfold bitsToByte. f_equal.
-    apply byte_bit_byte_id.
-    
-    apply H. Transparent bytesToBits.
-Qed.
-
-Close Scope string_scope.
-
-(* ------- *)
-
-Theorem bytes_bits_def_eq : forall (bytes : list Z),
-                              Forall (fun b => 0 <= b < 256) bytes ->
-                              bytes_bits_lists (bytesToBits bytes) bytes.
-Proof.
-  intros range bytes.
-  induction bytes as [ | byte bytes ].
-  -
-    simpl. apply eq_empty.
-  -
-    apply eq_cons.
-
-    *
-      apply IHbytes.
-    *
-      unfold convertByteBits.
-      do 8 eexists.
-      split.
-      +
-        reflexivity.
-      +
-        do_range H reflexivity.
-Qed.
-
-Theorem bytes_bits_comp_ind : forall (bits : Blist) (bytes : list Z),
-                               Forall (fun b => 0 <= b < 256) bytes ->
-                               bits = bytesToBits bytes ->
-                               bytes_bits_lists bits bytes.
-Proof.
-  intros bits bytes range corr.
-  rewrite -> corr.
-  apply bytes_bits_def_eq.
-  assumption.
-Qed.
-
-(* unsure if this one is easier than the previous *)
-Theorem bytes_bits_ind_comp : forall (bits : Blist) (bytes : list Z),
-                                 Forall (fun b => 0 <= b < 256) bytes ->
-                                 bytes_bits_lists bits bytes ->
-                                 bytes = bitsToBytes bits.
-Proof.
-  intros bits bytes range corr.
-  induction corr.
-  - reflexivity.
-  -
-    rewrite -> IHcorr.
-    *
-      unfold convertByteBits in H.
-      unfold bitsToBytes.
-      fold bitsToBytes.
-      f_equal.
-
-      assert (range' : 0 <= byte < 256). admit.
-
-      unfold bitsToByte.
-      Print convertByteBits.
-      destruct_exists. destruct H7. inversion H7.
-      subst. reflexivity.
-
-      * admit.                  (* bytes in range *)
-Qed.
-
-Theorem bits_bytes_ind_comp : forall (bits : Blist) (bytes : list Z),
-                                 Forall (fun b => 0 <= b < 256) bytes ->
-                                 bytes_bits_lists bits bytes ->
-                                 bits = bytesToBits bytes.
-Proof.
-  intros bits bytes range corr.
-  induction corr.
-  - reflexivity.
-  -
-    unfold convertByteBits in H.
-    destruct_exists.
-    destruct H7.
-    inversion H7.
-    subst.
-    clear H7.
-    rewrite -> IHcorr.
-    unfold bytesToBits.
-    fold bytesToBits.
-    assert (list_8 : forall {A : Type} (e0 e1 e2 e3 e4 e5 e6 e7 : A) (l : list A),
-                       e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: e7 :: l =
-                       [e0; e1; e2; e3; e4; e5; e6; e7] ++ l).
-    reflexivity.
-    rewrite -> list_8.
-    f_equal.
-    apply bits_byte_bits_id.
-
-    admit.                      (* in range *)
-Qed.
-
-Lemma bytesToBits_app : forall (l1 l2 : list Z),
-                          bytesToBits (l1 ++ l2) = bytesToBits l1 ++ bytesToBits l2.
-Proof.
-  induction l1; intros.
-  * reflexivity.
-  *
-    simpl. rewrite -> IHl1. reflexivity.
-Qed.    
-
-Lemma bytesToBits_len : forall (l : list Z),
-                          length (bytesToBits l) = (length l * 8)%nat.
-Proof.
-  induction l; intros; try reflexivity.
-  -
-    simpl.
-    rewrite -> IHl.
-    reflexivity.
-Qed.    
-    
 (* ----------------------------------------------- *)
 
 Check HMAC.
-
-(* HMAC
-     : nat ->
-       nat ->
-       (Blist -> Blist -> Blist) ->
-       Blist ->
-       (Blist -> list Blist) -> Blist -> Blist -> Blist -> Blist -> Blist *)
-
-(*
-Parameter sha_iv : Bvector (SHA256_.DigestLength * 8).
-Parameter sha_h : Bvector c -> Bvector (c + p) -> Bvector c.
-Parameter sha_splitandpad_vector :
-  Blist -> list (Bvector (SHA256_.DigestLength * 8 + p)).
-
-(* Parameter fpad : Bvector p. *)
-*)
 
 Definition c:nat := (SHA256_.DigestLength * 8)%nat.
 Definition p:=(32 * 8)%nat.
@@ -951,84 +648,6 @@ revert front FRONT range f_len F_len concat_eq;
       
 *)      
     
-    
-    
-    
-
-(* is this necessarily true? the other direction is true *)
-Lemma blocks_equiv :
-  forall (front back : Blist) (FRONT BACK : list int),
-    Forall (fun b : Z => 0 <= b < 256) (SHA256.intlist_to_Zlist (FRONT ++ BACK)) ->
-    (* TODO: fix proof below *)
-    InBlocks 16 FRONT ->
-    InBlocks 16 BACK ->
-    InBlocks 512 front ->
-    InBlocks 512 back ->
-    front ++ back = convert (FRONT ++ BACK) ->
-    front = convert FRONT /\ back = convert BACK.
-Proof.
-  intros front back FRONT BACK range Fblock Bblock fblock bblock concat_eq.
-  unfold convert in *.
-  split.
-  (* split; apply bits_bytes_ind_comp. *)
-
-  * admit.                      (* range *)
-  *                             (* front *)
-    pose proof bytes_bits_comp_ind range concat_eq as bytes_bits_comp_ind.
-    rewrite -> pure_lemmas.intlist_to_Zlist_app in concat_eq.
-    (* can prove InBlocks 512 (convert (FRONT ++ BACK)) *)
-    rewrite -> pure_lemmas.intlist_to_Zlist_app in bytes_bits_comp_ind.
-    rewrite -> bytesToBits_app in concat_eq.
-
-    revert front back BACK range Bblock fblock bblock concat_eq bytes_bits_comp_ind.
-    induction Fblock; intros.
-    -
-      revert back BACK range Bblock bblock concat_eq bytes_bits_comp_ind0.
-      induction fblock; intros.
-      + 
-        simpl in *.
-        apply concat_eq.
-      +
-        simpl in *.
-        rewrite -> H0 in concat_eq.
-        (* is concat_eq actually going to lead to a contradiction? bad feeling my proof is wrong... *)
-        (* this is actually not true -- need that 32 * length FRONT = length front,
-         likewise for BACK and back -- do i have this in fold_equiv?
-         have concrete lengths (16 and 512) for front, only InBlocks for back...
-         + full0 = convert full
-         so i can prove it for the front, which then implies it for the back
-         (they are not equally easy to prove)
-*)
-
-    (* --- *)
-(*
-
-    (* induction bytes_bits_comp_ind. *)
-    induction fblock.
-    -
-      induction Fblock.
-      + apply eq_empty.
-      +
-        Print InBlocks.
-        simpl in concat_eq.
-        rewrite -> H0 in concat_eq.
-        (* need to do inversion here... *)
-
-        admit.
-        
-        
-      
-  (* rewrite -> bytesToBits_app in concat_eq. *)
-    admit.
-
-  *
-    admit.                      (* range *)
-
-  *
-    admit.
-*)
-Admitted.
-
 (* it's more of an iteration theorem than a fold theorem *)
 Lemma fold_equiv_blocks :
   forall (l : Blist) (acc : Blist)
@@ -1143,9 +762,7 @@ Proof.
        rewrite -> H2. rewrite -> app_length. rewrite -> H1. omega.
 Qed.
 
-(* proof residue
-      apply IHbytes_blocks.
-
+(*
 - was double induction necessary?
 - what about IHbytes_blocks?
 - better to rewrite into front and back, then break that up, then apply the *first* induction hypothesis,
@@ -1153,9 +770,6 @@ Qed.
 
 - TODO: prove that they are InBlocks after padding and that front~front0, back~back0
  *)
-
-(* TODO remove *)
-Require Import sha_padding_lemmas.
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
                         (* add length assumptions here + intros them *)
@@ -1237,7 +851,6 @@ Proof.
      * unfold sha_iv. reflexivity.
 Qed.
 
-
 (* --------------------------------------- *)
 
 (* MAIN THEOREM *)
@@ -1288,26 +901,28 @@ Proof.
     *
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
-      pose proof bytes_bits_length ops_eq as ops_len.
+      pose proof bytes_bits_length op (HMAC_SHA256.sixtyfour OP) as ops_len.
       rewrite -> ops_len.
-      pose proof bytes_bits_length padded_keys_eq as keys_len.
+      pose proof bytes_bits_length k K as keys_len.
       rewrite -> keys_len.
       rewrite -> padded_key_len.
       unfold HMAC_SHA256.sixtyfour.
       rewrite -> length_list_repeat.
       reflexivity.
+      apply padded_keys_eq.
+      apply ops_eq.
 
-    * 
+    *
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
-      pose proof bytes_bits_length ips_eq as ips_len.
+      pose proof bytes_bits_length ip (HMAC_SHA256.sixtyfour IP) as ips_len.
       rewrite -> ips_len.
-      pose proof bytes_bits_length padded_keys_eq as keys_len.
+      pose proof bytes_bits_length k K as keys_len.
       rewrite -> keys_len.
       rewrite -> padded_key_len.
       unfold HMAC_SHA256.sixtyfour.
       rewrite -> length_list_repeat.
       reflexivity.
+      apply padded_keys_eq.
+      apply ips_eq.
 Qed.
-
-End Equiv.
