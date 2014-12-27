@@ -25,9 +25,25 @@
 \documentclass[twocolumn,showpacs,%
   nofootinbib,aps,superscriptaddress,%
   eqsecnum,prd,notitlepage,showkeys,10pt]{revtex4-1}
+
+% displays all math in sans-serif font TODO  
+\usepackage[cm]{sfmath}
   
 \usepackage{graphicx}
 \graphicspath{ {images/} }
+
+\usepackage{listings}
+\lstset{
+basicstyle=\small\ttfamily,
+%basicstyle=\ttfamily,
+columns=flexible,
+breaklines=true
+}
+%\lstset{language=Coq}
+
+\usepackage [english]{babel}
+\usepackage [autostyle, english = american]{csquotes}
+\MakeOuterQuote{"}
 
 \usepackage{amssymb}
 \usepackage{amsmath}
@@ -49,6 +65,8 @@ TODO shorten abstract (December 26, 2014)
 \end{abstract}
 
 \maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Introduction}
 
@@ -77,7 +95,8 @@ Coq is a proof assistant.
 
 Coq has two internal languages, Gallina and the tactic language. Gallina is a purely functional language similar to OCaml. The tactic language is used for doing proofs and defining new proof strategies.
 
-As used here, formal verification of a piece of code means proving that this implementation fulfills some kind of high-level specification. The code will usually be written in a low-level language such as C and may contain optimizations and other tricks. The specification, or "spec," will usually be written in a high-level language such as OCaml or Gallina and is typically more mathematical and abstract.
+As used here, formal verification of a piece of code means proving that this implementation fulfills some kind of high-level specification. The code will usually be written in a low-level language such as C and may contain optimizations and other tricks. The specification, or "spec," will usually be written in a high-level language such as OCaml or Gallina and is typically more mathematical and abstract. As Appel 2015 notes, "A program without a specification {\it cannot be incorrect}, it can only
+be surprising."
 
 For example, TODO sorting algorithm
 
@@ -107,7 +126,7 @@ SHA-256 is a cryptographic hash algorithm used for TODO. Mention OpenSSL.
 
 It operates on a message of any length by breaking the message into 512-bit blocks. TODO (is this right?) It outputs a 256-bit digest. 
 
-Like all such hash functions, it comes with guarantees of TODO (collision resistance...)
+Like all such hash functions, it comes with guarantees of pre-image resistance, second pre-image resistance, and collision resistance. Thus, it is very difficult for an adversary to change the input message without changing the digest.
 
 Inner hash function
 
@@ -115,13 +134,30 @@ PRF
 
 \subsection{HMAC}
 
-A message authentication code is used to
+SHA-256 provides only a guarantee of integrity; that is, a guarantee the message has not been tampered with. A message authentication code (MAC) is used to guarantee both integrity and authenticity, the latter meaning that the message's origin is the expected sender. Sender and receiver need only exchange a secret key before beginning their communication. In addition, whereas SHA-256 is vulnerable to length-extension attacks, HMAC is not.
 
-HMAC uses SHA-256. 
+To accomplish this, HMAC (a "hash-based message authentication code") was designed in Bellare 1996. It includes a proof that the HMAC protocol (described below) is a pseudo-random function (PRF) on its inputs given that the underlying hash primitive is a PRF. In SHA-256, the underlying hash primitive would be its compression function.
+% TODO different MAC security requirements
 
-HMAC's code is: (SHORT CODE HERE)
+To compute the authentication code of a message, RFC 2104 defines HMAC as the following action:
+$$HMAC_{H, K}(m) = H ( (k \oplus opad) | H ( k \oplus ipad | m )  ) $$
 
-Mention OpenSSL.
+where
+
+\begin{itemize}
+\item its block length is 512 bits, or 64 bytes,
+\item $H$ is a cryptographic hash function (here, $SHA$-$256$),
+\item $K$ is a secret key padded to the right with extra zeros to the input block size of the hash function, or the hash of the original key if it's longer than that block size, 
+\item $m$ is the message to be authenticated, 
+\item $|$ denotes concatenation, 
+\item $\oplus$ denotes bitwise exclusive or (XOR), 
+\item $opad$ is the outer padding (the byte $0x5c$ repeated 64 times to be the length of one block), 
+\item and $ipad$ is the inner padding ($0x36$ repeated as above).
+\end{itemize}
+
+Note that formalizing HMAC is a natural extension of our work on SHA-256, since HMAC is not much more complicated than applying a cryptographic hash function twice. 
+
+OpenSSL includes an implementation of HMAC in C which calls the OpenSSL implementation of SHA-256.
 
 \begin{figure}[h!]
 	\centering
@@ -133,23 +169,48 @@ Mention OpenSSL.
 
 Verification of SHA-256.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{The proof of equivalence}
 
 \subsection{The concrete HMAC spec}
 
-Operates on bytes. Runnable code. Calls the spec of SHA-256.
+This spec was written to conform to RFC 2104; thus, it contains runnable code, operates on byte lists, and returns a byte list. The spec distinguishes between the $Z$ type and the $byte$ type (values of type $Z$ in range $[0, 256)$); however, we will use $Z$ synonymously with $byte$ with the understanding that all values are in range.
+
+The spec is constructed to work with generic cryptographic hash functions. We will instantiate it with the $SHA$-$256$ functional program, which we treat as a black box that takes care of the message padding and compression function iteration.
+
+The code for this spec and the next is in the Appendix.
 
 \subsection{The abstract HMAC spec}
 
-It includes the GNMAC/\verb|GHMAC_2K| structures. It leaves the hash function, two padding functions, and the hash function's initialization vector abstract.
+% TODO elaborate on Bellare stuff
+This spec was written to conform to the HMAC protocol defined in Bellare 1996; thus, to be as general as possible, it operates on bit vectors and returns a bit vector. (A bit vector $Bvector \textrm{ } n$ is a type dependent on a natural number value $n$, the length of the vector.)
 
-Parameters:
+It defines HMAC via the two-keyed HMAC ($HMAC\_2K$) and generalized HMAC ($GHMAC\_2K$) structures, rather than straightforwardly as the concrete spec does. It also includes an implementation of generalized NMAC ($GNMAC$), another structure used in the proof.
 
-\subsection{Instantiating the abstract specification}
+The spec does not contain runnable code as-is because it leaves several parameters abstract:
 
-We wrap the concrete functions in byteToBit and/or \verb|intlist_to_Zlist| conversion functions. 
+\lstinputlisting[lastline=19]{../HMAC_spec_parameters.v}
 
-Code:
+% TODO code here
+
+The proof depends on the following assumptions that are explicit in the spec:
+\begin{enumerate}
+\item the key is of the right length (one block)
+\item $opad \neq ipad$ (they differ in at least one bit)
+\item the padding function $splitAndPad$ is one-to-one
+\item the hash function (e.g. $SHA$-$256$) is an iterated version of the compression function, a la Merkle-Damgard.
+\end{enumerate}
+
+as well as other implicit assumptions explained in Section III.
+
+The fourth assumption can be seen in this definition of the $SHA$-$256$ analogue, $hash\_words$:
+
+\lstinputlisting[firstline=23, lastline=28]{../HMAC_spec_parameters.v}
+
+However, $SHA$-$256$ includes a padding function for the message, while this spec's use of dependent types ($Bvector \textrm{ } n$) forces the use of two types of ad-hoc padding, the functions $app\_fpad$ and $splitAndPad$.
+
+\lstinputlisting[firstline=55, lastline=59]{../HMAC_spec_abstract.v}
 
 \subsection{Proof outline}
 
@@ -161,23 +222,88 @@ Equivalence of specs means
 	\caption{Stages of the equivalence/equality proofs.}
 \end{figure}
 
-The main differences between the specs are that (make a table?)
+Again, the main differences between the specs are that (TODO make a table)
 \begin{enumerate} 
+\item GNMAC and GHMAC\_2K structures
 \item the abstract spec operates on bits, whereas the concrete spec operates on bytes
 \item the abstract spec uses the dependent type \verb|Bvector n|, which is a bit list of length $n$, whereas the concrete spec uses byte lists and int lists
 \item the abstract spec pads its input twice in an ad-hoc manner, whereas the concrete spec uses the SHA-256 padding function consistently
 \item the SHA-256 concrete spec uses the Z type, whereas the HMAC concrete type uses the byte type, which is Z constrained to be in $[0, 255]$.
 \end{enumerate}
 
-\subsection{Proof techniques}
+We solve some of them by massaging the two specs in the "same direction."
 
-We reasoned about the bytes/bits proof via the following two frameworks.
+%%%%%
+\subsection{Bridging bytes and bits}
+
+We would like to prove that the concrete and abstract HMAC specs ($HMAC_c$ and $HMAC_a$) are extensionally equal. That is, equal inputs always result in equal outputs: 
+$$k_c = k_a \rightarrow
+m_c = m_a \rightarrow$$ 
+$$HMAC_c(k_c, m_c) = HMAC_a(k_a, m_a).$$
+
+However, $HMAC_c$ operates on bits (in fact, vectors of bits) and $HMAC_a$ operates on bytes (lists of bytes). So the statement $k_c = k_a$ (for example) does not have meaning because the types are different. To solve this, we generalize equality to equivalence. Given that the inputs are {\it equivalent}, the outputs will be {\it equivalent}.
+
+$$k_c \approx  k_a \rightarrow
+m_c \approx m_a \rightarrow$$ 
+$$HMAC_c(k_c, m_c) \approx HMAC_a(k_a, m_a).$$
+
+The equivalence relation $\approx$ can be defined either computationally or inductively. Both definitions will turn out to be useful. (From now on, we will use $b$ to name a value of type $Blist$ (list of booleans, or bits) and $B$ to name a value of type $list$ $Z$ (list of bytes).)
+
+The computational relation is 
+$$b \approx_c B :=$$
+$$b = bytesToBits \textrm{ } B,$$ where $bytesToBits : list \textrm{} Z \rightarrow Blist$ is a conversion function.
+
+% TODO explain inductive
+The inductive relation is 
+$$b \approx_i B :=$$
+$$bytes\_bits\_lists \textrm{ } b \textrm{ } B.$$
+
+where $bytes\_bits\_lists : Blist \rightarrow list \textrm{ } Z \rightarrow Prop$ creates an "assertion" that $b$ and $B$ are related in this way, together with two constructors used to provide evidence to prove the assertion. (For more on inductively defined propositions, see the $Prop$ chapter in the Coq textbook "Software Foundations.")
+
+% TODO fix formatting
+\lstinputlisting[firstline=27, lastline=34]{../ByteBitRelations.v}
+
+The inductive and computational definitions have been proven equivalent in the sense that 
+$$bytes\_bits\_lists \textrm{ } b \textrm{ } B \leftrightarrow b = bytesToBits \textrm{ } B.$$
+
+For several other ways to convert between the definitions, see $ByteBitRelations.v$.
+
+% Insert abstract section here
+
+\subsection{Instantiating the abstract specification}
+
+We instantiate the block sizes and wrap the concrete functions in $byteToBit$ and/or $intlist\_to\_Zlist$ conversion functions. The latter is necessary because portions of the $SHA$-$256$ spec operate on lists of $Integer$s (four bytes, or $Z$, combined into 32 bits), as specified in FIPS Pub. 180-2.
+
+\lstinputlisting[firstline=32, lastline=48]{../HMAC_spec_parameters.v}
+
+Note that we are essentially converting the type of the values from $intlist \rightarrow \ldots \rightarrow intlist$ to $Blist \ldots \rightarrow \ldots Blist$ by converting their inputs and outputs.
+
+We can use the computational equivalence relation, instantiated with a generic conversion function, to reason abstractly about the behavior of such wrapped functions.
+
+$$x \approx_c X :=$$ $$x = convert\_BA \textrm{ } X.$$ 
+
+\begin{enumerate}
+\item roundtrip
+\item iteration
+\end{enumerate}
+
+We reasoned about the bytes/bits proof via the following framework.
 
 \begin{itemize}
 \item (Round-trip and conversion properties. Galois connections or other algebraic structure?)
 \item Wrapped function equivalence on application. Interestingly, we have equivalence when a "round-trip" of composing the two transportation functions results in the identity function.
 \item Wrapped function equivalence on repeated application: depends on the previous one, and is completed by induction on the number of applications. This corresponds to the SHA-256 operation of hashing blocks.
 \end{itemize}
+
+This is the usefulness of the computational definition.
+
+\subsection{Main lemmas}
+
+Now, the usefulness of the inductive definition
+
+It allows us to break it up into 4 main lemmas: main proof
+
+\subsection{Other proof techniques}
 
 The following techniques may be useful in future equivalence proofs.
 
@@ -216,7 +342,7 @@ The $f^* cAU$ property is used to prove that generalized NMAC (GNMAC) using $f^*
 
 Using that fact and the assumption that $f^*$ is RkA-resistant (?), we prove that GHMAC (single-keyed) using $f^*$ is a PRF. This, plus the fact that the padding function for $f$ is one-to-one, leads finally to the proof that HMAC using $f^*$ is a PRF.
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Formalization in Coq}
 
@@ -266,13 +392,21 @@ Andrew Appel, Lennart Beringer, Adam Petcher, and Qinxiang Cao.
 
 \section{references}
 
-"Verification of SHA-256," Appel (unpublished?)
+RFC 2104 (HMAC, 1997): \\
+\verb|https://tools.ietf.org/html/rfc2104|
+
+FIPS Publication 180-4 (Secure Hash Standard, containing SHA-256): \\
+\verb|http://csrc.nist.gov/publications/PubsFIPS.html|
+
+"Verification of SHA-256," Appel 2015
 
 "New Proofs for NMAC and HMAC: Security without Collision-Resistance," Bellare (1996)
 
 "Keying Hash Functions for Message Authentication," Bellare (2004)
 
-"MCF," Petcher (unpublished?)
+"MCF," Petcher (unpublished)
+
+Barthe 2009
 
 "Merkle-Damgard in EasyCrypt," IMDEA
 
@@ -280,18 +414,43 @@ Andrew Appel, Lennart Beringer, Adam Petcher, and Qinxiang Cao.
 
 "Software Foundations," Pierce et al.
 
+"Verified Functional Algorithms," Appel, OPLSS
+
+"HMAC" Wikipedia page
+
+"SHA-256" Wikipedia page
+
 Coq.Strings.Ascii
+
+OpenSSL HMAC and SHA-256 code
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{appendix}
 
+% TODO syntax highlighting and nicer font
+\subsection{The abstract HMAC spec}
+
+\lstinputlisting{../HMAC_spec_abstract.v}
+
 \subsection{The concrete HMAC spec}
 
-\subsection{The abstract HMAC spec}
+\lstinputlisting[lastline=90]{../HMAC_functional_prog.v}
 
 \subsection{Definitions}
 
+\lstinputlisting[firstline=173, lastline=190]{../HMAC_spec_harvard_concat.v}
+
+\lstinputlisting[firstline=20, lastline=24]{../ByteBitRelations.v}
+
+\lstinputlisting[firstline=27, lastline=34]{../ByteBitRelations.v}
+
 \subsection{The equivalence proof}
 
+\lstinputlisting[firstline=858]{../HMAC_spec_harvard_concat.v}
+
 \subsection{Selected theorems and proofs}
+
+See the repository at \\ \verb|github.com/hypotext/vst-crypto|.
 
 \end{document}

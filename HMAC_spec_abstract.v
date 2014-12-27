@@ -19,6 +19,8 @@ Fixpoint splitVector(A : Set)(n m : nat) : Vector.t A (n + m) -> (Vector.t A n *
 
 Section HMAC.
 
+  (* c is the output size, b is the block size (larger than the output size),
+     and p is the difference between them *)
   Variable c p : nat.
   Definition b := c + p.
   

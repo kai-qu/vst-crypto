@@ -41,8 +41,8 @@ Local Open Scope program_scope.
 (* In XorCorrespondence *)
 (* Definition Blist := list bool. *)
 
-Definition splitList {A : Type} (h : nat) (t : nat) (l : list A) : (list A * list A) :=
-  (firstn h l, skipn t l).
+Definition splitList {A : Type} (n : nat) (l : list A) : (list A * list A) :=
+  (firstn n l, skipn n l).
 
 Definition concat {A : Type} (l : list (list A)) : list A :=
   flat_map id l.
@@ -127,7 +127,7 @@ Section HMAC.
 
   (* TODO fix this *)
   Definition GNMAC k m :=
-    let (k_Out, k_In) := splitList c c k in
+    let (k_Out, k_In) := splitList c k in
     h k_Out (h_star_pad k_In m). (* could take head of list *)
 
   Check GNMAC.
@@ -140,7 +140,7 @@ Check hash_words.               (* list Blist -> Blist *)
   (* The "two-key" version of GHMAC and HMAC. *)
   (* Concatenate (K xor opad) and (K xor ipad) *)
   Definition GHMAC_2K (k : Blist) m :=
-    let (k_Out, k_In) := splitList b b k in (* concat earlier, then split *)
+    let (k_Out, k_In) := splitList b k in (* concat earlier, then split *)
       let h_in := (hash_words_padded (k_In ++ m)) in
         hash_words_padded (k_Out ++ h_in).
 
@@ -183,9 +183,36 @@ Definition sha_h (regs : Blist) (block : Blist) : Blist :=
                                      (SHA256.Zlist_to_intlist (bitsToBytes block))
               )).
 
-(* Parameter sha_splitandpad : Blist -> Blist. *)
 Definition sha_splitandpad (msg : Blist) : Blist :=
   bytesToBits (sha_padding_lemmas.pad (bitsToBytes msg)).
+
+Definition convert (l : list int) : list bool :=
+  bytesToBits (SHA256.intlist_to_Zlist l).
+
+
+(* ------------------------------------------------- *)
+(* Neat conversion functions (TODO move rest of spec over *)
+
+(*
+Definition c := (SHA256_.DigestLength * 8)%nat.
+Definition p := (32 * 8)%nat.
+
+Definition intsToBits (l : list int) : list bool :=
+  bytesToBits (SHA256.intlist_to_Zlist l).
+
+Definition bitsToInts (l : Blist) : list int :=
+  SHA256.Zlist_to_intlist (bitsToBytes l).
+
+Definition sha_iv : Blist :=
+  intsToBits SHA256.init_registers.
+
+Definition sha_h (regs : Blist) (block : Blist) : Blist :=
+  intsToBits (SHA256.hash_block (bitsToInts regs) (bitsToInts block)).
+
+Definition sha_splitandpad (msg : Blist) : Blist :=
+  bytesToBits (sha_padding_lemmas.pad (bitsToBytes msg)).
+*)
+
 
 (* -------------------------------------------------------- LEMMAS *)
 
@@ -217,11 +244,11 @@ Qed.
 
 SearchAbout length.
 Check splitList.
-Eval compute in splitList 0%nat 0%nat [].
+Eval compute in splitList 0%nat [].
 
 Lemma split_append_id : forall {A : Type} (len : nat) (l1 l2 : list A),
                                length l1 = len -> length l2 = len ->
-                               splitList len len (l1 ++ l2) = (l1, l2).
+                               splitList len (l1 ++ l2) = (l1, l2).
 Proof.
   induction len; intros l1 l2 len1 len2.
   -
@@ -480,8 +507,6 @@ Proof.
   admit. admit.                 (* intlist_to_Zlist preserves in-range *)
 Qed.
 
-Definition convert (l : list int) : list bool :=
-  bytesToBits (SHA256.intlist_to_Zlist l).
 
 Lemma front_equiv :
   (* forall (front back : Blist) (FRONT BACK : list int), *)
@@ -860,7 +885,7 @@ Theorem HMAC_spec_equiv : forall
                             (k m h : Blist) (op ip : Blist),
   ((length K) * 8)%nat = (c + p)%nat ->
   Zlength K = Z.of_nat SHA256_.BlockSize ->
-(* TODO: first implies this *)
+  (* TODO: first implies this *)
   (* TODO: might need more hypotheses about lengths *)
   bytes_bits_lists k K ->
   bytes_bits_lists m M ->
@@ -886,7 +911,8 @@ Proof.
   unfold HMAC_2K. unfold GHMAC_2K. rewrite -> split_append_id.
 
   simpl.
-
+  
+  (* Major lemmas *)
   apply SHA_equiv_pad.
   apply concat_equiv.
   apply xor_equiv_Z; try assumption.

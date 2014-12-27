@@ -7,22 +7,13 @@ Require Import Arith.
 
 Definition Blist := list bool.
 
-Fixpoint splitVector(A : Set)(n m : nat) : Vector.t A (n + m) -> (Vector.t A n * Vector.t A m) :=
-  match n with
-    | 0 => 
-      fun (v : Vector.t A (O + m)) => (@Vector.nil A, v)
-    | S n' => 
-      fun (v : Vector.t A (S n' + m)) => 
-        let (v1, v2) := splitVector _ _ (Vector.tl v) in
-          (Vector.cons _ (Vector.hd v) _ v1, v2)
-  end.
+(* Replacing splitVector *)
+Definition splitList {A : Type} (n : nat) (l : list A) : (list A * list A) :=
+  (firstn n l, skipn n l).
 
-(* TODO: forces n + m = length of input, should really take one parameter (n) *)
-Eval compute in splitVector 1 2 [1;2;3].
-
-(* TODO: revise this to take only n? *)
-Definition splitList {A : Type} (h : nat) (t : nat) (l : list A) : (list A * list A) :=
-  (firstn h l, skipn t l).
+(* Replacing BVxor *)
+Definition BLxor (xs : Blist) (ys : Blist) :=
+  map (fun p => xorb (fst p) (snd p)) (combine xs ys).
 
 Section HMAC.
 
@@ -54,16 +45,16 @@ Section HMAC.
     app_fpad (h_star k x).
 
   Definition GNMAC k m :=
-    let (k_Out, k_In) := splitVector c c k in
+    let (k_Out, k_In) := splitList c k in
     h k_Out (app_fpad (h_star k_In m)).
 
   (* The "two-key" version of GHMAC and HMAC. *)
-  Definition GHMAC_2K (k : Bvector (b + b)) m :=
-    let (k_Out, k_In) := splitVector b b k in
+  Definition GHMAC_2K (k : Blist) m :=
+    let (k_Out, k_In) := splitList b k in
       let h_in := (hash_words (k_In :: m)) in 
         hash_words (k_Out :: (app_fpad h_in) :: nil).
   
-  Definition HMAC_2K (k : Bvector (b + b)) (m : Blist) :=
+  Definition HMAC_2K (k : Blist) (m : Blist) :=
     GHMAC_2K k (splitAndPad m).
 
   (* opad and ipad are constants defined in the HMAC spec. *)
@@ -71,9 +62,9 @@ Section HMAC.
   Hypothesis opad_ne_ipad : opad <> ipad.
 
   Definition GHMAC (k : Blist) :=
-    GHMAC_2K (Vector.append (BVxor _ k opad) (BVxor _ k ipad)).
+    GHMAC_2K (BLxor k opad ++ BLxor k ipad).
 
   Definition HMAC (k : Blist) :=
-    HMAC_2K (Vector.append (BVxor _ k opad) (BVxor _ k ipad)).
+    HMAC_2K (BLxor k opad ++ BLxor k ipad).
 
 End HMAC.

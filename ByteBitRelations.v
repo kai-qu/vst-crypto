@@ -33,12 +33,6 @@ Inductive bytes_bits_lists : Blist -> list Z -> Prop :=
                 bytes_bits_lists (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: bits)
                                  (byte :: bytes).
 
-Definition byte_to_64list (byte : byte) : list Z :=
-   map Byte.unsigned (HMAC_SHA256.sixtyfour byte).
-
-Definition Z_to_64list (num : Z) : list Z :=
-   HMAC_SHA256.sixtyfour num.
-
 (* ----- Computational *)
 
 (* TODO: assumes Z is positive and in range, does not use Z.positive *)
@@ -81,15 +75,6 @@ Fixpoint bitsToBytes (bits : Blist) : list Z :=
     | _ => []
   end.
 
-Fixpoint bitsToBytes' (bits : Blist) : list Z :=
-  match bits with
-    | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: xs =>
-      let byte := 1 * (asZ b0) + 2 * (asZ b1) + 4 * (asZ b2) + 8 * (asZ b3)
-         + 16 * (asZ b4) + 32 * (asZ b5) + 64 * (asZ b6) + 128 * (asZ b7) in
-      byte :: bitsToBytes xs
-    | _ => []
-  end.
-
 (* -------------------- Various theorems and lemmas *)
 
 Lemma bytes_bits_length : forall (bits : Blist) (bytes : list Z),
@@ -128,7 +113,6 @@ Proof.
   intros byte range.
   do_range range reflexivity.
 Qed.
-(* TODO move this into a different file; takes a while to check *)
 
 Theorem bits_byte_bits_id : forall (b0 b1 b2 b3 b4 b5 b6 b7 : bool),
                               [b0; b1; b2; b3; b4; b5; b6; b7] =
