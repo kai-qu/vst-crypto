@@ -288,6 +288,9 @@ Section Example.
  Definition IP:Z := 210.
  Transparent Byte.repr.
 
+Definition byte_to_64list (byte : byte) : list Z :=
+   map Byte.unsigned (HMAC_SHA256.sixtyfour byte).
+
  Lemma ip_conv : convertByteBits [false; true; false; false; true; false; true; true] 210.
    repeat eexists.
  Qed.
@@ -390,51 +393,53 @@ Fixpoint iterate {A : Type} (n : nat) (f : A -> A) (x : A) :=
   end.
 
 Definition id {X : A} (x : A) : A := x.
+Definition wrap (F : B -> B) : A -> A :=
+  convert_BA ∘ F ∘ convert_AB.
+Definition roundtrip : B -> B :=
+  convert_AB ∘ convert_BA.
+
+Lemma roundtrip_id :
+  forall (X : B), convert_AB (convert_BA X) = X.
+Proof. Admitted.
 
 Lemma once_eq :
     forall (x : A) (X : B) (f : A -> A) (F : B -> B),
       x = convert_BA X ->
-      convert_AB (convert_BA X) = X ->
-      f = convert_BA ∘ F ∘ convert_AB ->
+      f = wrap F ->
+      X = roundtrip X ->
       f x = convert_BA (F X).
 Proof.
-  intros x X f F inputs_eq roundtrip f_def.
+  intros x X f F inputs_eq f_def roundtrip_id.
+  unfold roundtrip in *.
   rewrite -> inputs_eq.
   rewrite -> f_def.
+  unfold wrap in *.
   change ((convert_BA ∘ F ∘ convert_AB) (convert_BA X)) with
-     (convert_BA (F (convert_AB (convert_BA X)))).
-  rewrite -> roundtrip.
+    (convert_BA (F ((convert_AB ∘ convert_BA) X))).
+  rewrite <- roundtrip_id.
   reflexivity.
 Qed.
-
-Lemma roundtrip :
-  forall (X : B), convert_AB (convert_BA X) = X.
-Proof. Admitted.
 
 (* a simplified version of fold_equiv *)
 Lemma iterate_equiv :
   forall (x : A) (X : B) (f : A -> A) (F : B -> B) (n : nat),
-    f = convert_BA ∘ F ∘ convert_AB ->
     x = convert_BA X ->
-    convert_AB (convert_BA X) = X ->
+    f = wrap F ->
+    X = roundtrip X ->
     iterate n f x = convert_BA (iterate n F X).
 Proof.
   intros. revert x X f F H H0 H1.
-  induction n as [ | n']; intros x X f F func_wrap input_eq roundtrip'.
+  induction n as [ | n']; intros x X f F input_eq func_wrap roundtrip';
+  unfold wrap in *; unfold roundtrip in *.
   -
     simpl. apply input_eq.
   -
     simpl.
     pose proof once_eq as once_eq.
     apply once_eq.
-    apply IHn'.
-    apply func_wrap.
-    apply input_eq.
-    *
-      apply roundtrip'.
-    *
-      apply roundtrip.
-    * apply func_wrap.
+    apply IHn'; assumption.
+    * unfold wrap. apply func_wrap.
+    * symmetry. apply roundtrip_id.
 Qed.
 
 (* ----- *)

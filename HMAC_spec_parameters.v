@@ -47,3 +47,44 @@
   Definition sha_splitandpad (msg : Blist) : Blist :=
     bytesToBits (sha_padding_lemmas.pad (bitsToBytes msg)).
 
+  (* ---- Abstract framework *)
+
+(* B corresponds to bytes, A corresponds to bits *)
+Parameter A B : Type.
+Parameter convert_BA : B -> A.
+Parameter convert_AB : A -> B.
+
+Definition wrap (F : B -> B) : A -> A :=
+  convert_BA . F . convert_AB.
+
+Definition roundtrip : B -> B :=
+  convert_AB . convert_BA.
+
+(* really need the forall *)
+(* Note that the reverse may not hold *)
+Lemma roundtrip_id :
+  forall (X : B), convert_AB (convert_BA X) = X.
+Proof. Admitted.
+
+Lemma once_eq :
+    forall (x : A) (X : B) (f : A -> A) (F : B -> B),
+      x = convert_BA X ->
+      f = wrap F ->
+      X = roundtrip X ->
+      f x = convert_BA (F X).
+
+  (* --- *)
+
+Fixpoint iterate {A : Type} (n : nat) (f : A -> A) (x : A) :=
+  match n with
+    | O => x
+    | S n' => f (iterate n' f x)
+  end.
+
+(* a simplified version of fold_equiv *)
+Lemma iterate_equiv :
+  forall (x : A) (X : B) (f : A -> A) (F : B -> B) (n : nat),
+    x = convert_BA X ->
+    f = wrap F ->
+    X = roundtrip X ->
+    iterate n f x = convert_BA (iterate n F X).

@@ -51,6 +51,10 @@ breaklines=true
 \usepackage{dcolumn}
 \usepackage{hyperref}
 
+% \newcommand{name}[num]{definition}
+\newcommand{\eqn}[1] {\begin{gather*}#1\end{gather*}}
+\newcommand{\spc} {\textrm{ }}
+
 \begin{document}
 
 \title{Formally proving equivalence between abstract and concrete specifications of HMAC}
@@ -237,26 +241,33 @@ We solve some of them by massaging the two specs in the "same direction."
 \subsection{Bridging bytes and bits}
 
 We would like to prove that the concrete and abstract HMAC specs ($HMAC_c$ and $HMAC_a$) are extensionally equal. That is, equal inputs always result in equal outputs: 
-$$k_c = k_a \rightarrow
-m_c = m_a \rightarrow$$ 
-$$HMAC_c(k_c, m_c) = HMAC_a(k_a, m_a).$$
+\begin{gather*}
+k_c = k_a \rightarrow \\
+m_c = m_a \rightarrow \\
+HMAC_c(k_c, m_c) = HMAC_a(k_a, m_a).
+\end{gather*}
 
 However, $HMAC_c$ operates on bits (in fact, vectors of bits) and $HMAC_a$ operates on bytes (lists of bytes). So the statement $k_c = k_a$ (for example) does not have meaning because the types are different. To solve this, we generalize equality to equivalence. Given that the inputs are {\it equivalent}, the outputs will be {\it equivalent}.
-
-$$k_c \approx  k_a \rightarrow
-m_c \approx m_a \rightarrow$$ 
-$$HMAC_c(k_c, m_c) \approx HMAC_a(k_a, m_a).$$
+\begin{gather*}
+k_c \approx  k_a \rightarrow \\
+m_c \approx m_a \rightarrow \\
+HMAC_c(k_c, m_c) \approx HMAC_a(k_a, m_a).
+\end{gather*}
 
 The equivalence relation $\approx$ can be defined either computationally or inductively. Both definitions will turn out to be useful. (From now on, we will use $b$ to name a value of type $Blist$ (list of booleans, or bits) and $B$ to name a value of type $list$ $Z$ (list of bytes).)
 
 The computational relation is 
-$$b \approx_c B :=$$
-$$b = bytesToBits \textrm{ } B,$$ where $bytesToBits : list \textrm{} Z \rightarrow Blist$ is a conversion function.
+\begin{gather*}
+b \approx_c B := \\
+b = bytesToBits \textrm{ } B,
+\end{gather*} where $bytesToBits : list \textrm{} Z \rightarrow Blist$ is a conversion function.
 
 % TODO explain inductive
 The inductive relation is 
-$$b \approx_i B :=$$
-$$bytes\_bits\_lists \textrm{ } b \textrm{ } B.$$
+\begin{gather*}
+b \approx_i B := \\
+bytes\_bits\_lists \textrm{ } b \textrm{ } B.
+\end{gather*}
 
 where $bytes\_bits\_lists : Blist \rightarrow list \textrm{ } Z \rightarrow Prop$ creates an "assertion" that $b$ and $B$ are related in this way, together with two constructors used to provide evidence to prove the assertion. (For more on inductively defined propositions, see the $Prop$ chapter in the Coq textbook "Software Foundations.")
 
@@ -278,22 +289,57 @@ We instantiate the block sizes and wrap the concrete functions in $byteToBit$ an
 
 Note that we are essentially converting the type of the values from $intlist \rightarrow \ldots \rightarrow intlist$ to $Blist \ldots \rightarrow \ldots Blist$ by converting their inputs and outputs.
 
-We can use the computational equivalence relation, instantiated with a generic conversion function, to reason abstractly about the behavior of such wrapped functions.
+We can use the computational equivalence relation defined earlier ($\approx_c$), instantiated with a generic conversion function, to reason abstractly about the behavior of such wrapped functions. Let's define the framework as such (letting $. = \circ$, function composition):
 
-$$x \approx_c X :=$$ $$x = convert\_BA \textrm{ } X.$$ 
+\lstinputlisting[firstline=52, lastline=58]{../HMAC_spec_parameters.v}
 
-\begin{enumerate}
-\item roundtrip
-\item iteration
-\end{enumerate}
+Note that the types $B$ and $A$ are not symmetric, in the sense that 
 
-We reasoned about the bytes/bits proof via the following framework.
+Define two relations as such:
+\eqn{
+x \approx_c X := \\
+x = convert\_BA \textrm{ } X.
+}
+\eqn{
+f \approx_w F := \\
+f = wrap \textrm{ } F.
+}
 
-\begin{itemize}
-\item (Round-trip and conversion properties. Galois connections or other algebraic structure?)
-\item Wrapped function equivalence on application. Interestingly, we have equivalence when a "round-trip" of composing the two transportation functions results in the identity function.
-\item Wrapped function equivalence on repeated application: depends on the previous one, and is completed by induction on the number of applications. This corresponds to the SHA-256 operation of hashing blocks.
-\end{itemize}
+We ask: what assumptions are needed such that application of equivalent (via wrapping) functions to equivalent (via conversion) inputs result in equivalent (via conversion) outputs?
+\eqn{
+Lemma \spc once\_eq : \\
+\forall \spc (x : A) \spc (X : B) \spc (f : A \rightarrow A) \spc (F : B \rightarrow B),\\
+x \approx_c X \rightarrow \\
+f \approx_w F \rightarrow \\
+f \spc x \approx_c F \spc X
+}
+
+The necessary and sufficient assumption (together with the other two assumptions) is that we have output equivalence exactly when a "round-trip" of composing the two conversion functions results in the identity function. (The reader is invited to write out this short proof.)
+\eqn{
+Lemma \spc roundtrip : convert\_AB \circ convert\_BA = id }
+
+Indeed, we have proven that $bitsToBytes \circ bytesToBits = id$. Note that it does not hold the other way around. $bytesToBits \circ bitsToBytes$ is false if the length of the bit list input is not a multiple of 8.
+
+A natural extension is to prove output equivalence on repeated application of the wrapped functions, or iteration:
+
+\lstinputlisting[firstline=78, lastline=82]{../HMAC_spec_parameters.v}
+
+\eqn{
+Lemma \spc iterate\_equiv : \\
+  \forall  \spc (x : A) \spc (X : B)\\
+   (f : A \rightarrow A) \spc (F : B \rightarrow B) \spc (n : nat), \\
+    x \approx_c X \rightarrow \\
+    f \approx_w F \rightarrow \\
+    iterate \spc n \spc f \spc x = convert\_BA \spc (iterate \spc n \spc F \spc X).
+}
+
+Here we need both $once\_eq$ and our newly admitted assumption $roundtrip$, which can be rephrased as $\forall (X : B), X = roundtrip \spc X$. The proof is completed by induction on $n$.
+
+This framework is not just an academic exercise. $once\_equiv$ and $iterate\_equiv$ correspond directly to several lemmas in the bytes/bits equivalence proof.
+
+In particular, $iterate\_equiv$ corresponds to the SHA-256 operation of hashing blocks. % TODO code here
+
+Round-trip and conversion properties. Galois connections or other algebraic structure?
 
 This is the usefulness of the computational definition.
 
