@@ -54,6 +54,7 @@ breaklines=true
 % \newcommand{name}[num]{definition}
 \newcommand{\eqn}[1] {\begin{gather*}#1\end{gather*}}
 \newcommand{\spc} {\textrm{ }}
+\newcommand{\s} {\textrm{ }}
 
 \begin{document}
 
@@ -314,7 +315,7 @@ f \approx_w F \rightarrow \\
 f \spc x \approx_c F \spc X
 }
 
-The necessary and sufficient assumption (together with the other two assumptions) is that we have output equivalence exactly when a "round-trip" of composing the two conversion functions results in the identity function. (The reader is invited to write out this short proof.)
+The necessary and sufficient assumption (together with the other two assumptions) is that we have output equivalence exactly when a "round-trip" of composing the two conversion functions results in the identity function. (The reader is invited to finish this short proof.)
 \eqn{
 Lemma \spc roundtrip : convert\_AB \circ convert\_BA = id }
 
@@ -335,19 +336,49 @@ Lemma \spc iterate\_equiv : \\
 
 Here we need both $once\_eq$ and our newly admitted assumption $roundtrip$, which can be rephrased as $\forall (X : B), X = roundtrip \spc X$. The proof is completed by induction on $n$.
 
-This framework is not just an academic exercise. $once\_equiv$ and $iterate\_equiv$ correspond directly to several lemmas in the bytes/bits equivalence proof.
+This framework is not just an academic exercise. $once\_equiv$ and $iterate\_equiv$ correspond directly to several lemmas in the bytes/bits equivalence proof. In particular, $iterate$ corresponds directly to the SHA-256 operation of hashing blocks. 
 
-In particular, $iterate\_equiv$ corresponds to the SHA-256 operation of hashing blocks. % TODO code here
+\lstinputlisting[firstline=178, lastline=182]{../SHA256.v}
 
-Round-trip and conversion properties. Galois connections or other algebraic structure?
+The proof of equivalence works the same way. One can almost directly substitute the parameters into $iterate\_equiv$. 
+\eqn{
+Lemma \s fold\_equiv\_blocks : \\
+\forall (l : Blist) \s (acc : Blist) \s (L : list \s int) \s (ACC : list \s int), \\
+      InBlocks \s 16 \s L \rightarrow \\
+      l \approx_c L \rightarrow \\
+      acc \approx_c ACC \rightarrow \\
+      hash\_blocks\_bits \s sha\_h \s acc \s l \s \approx_c SHA256.hash\_blocks \s ACC \s L.
+}	
 
-This is the usefulness of the computational definition.
+The only differences are that the functions in question take multiple inputs, the length of $L$ must be a multiple of 16 (the block size for the $Integer$ type, 512 bits), and the method of iteration is slightly modified to be parametrized by the length of the input list ($firstn$, $skipn$). $sha_h$ contains the wrapped $SHA256.hash_block$ function. The code for the proof is in $HMAC\_spec\_concat.v$.
 
-\subsection{Main lemmas}
+(One wonders whether this "one-way roundtrip" property has been formalized elsewhere, perhaps in a Coq abstract algebra library. We found that the concepts of Galois connections and setoids were similar, but not useful.)
 
-Now, the usefulness of the inductive definition
+In sum, the computational relation $\approx_c$ makes abstract reasoning easy precisely because it is computational, so one can rewrite using equality in proofs. It can loosely be called "computationally compositional" since we start with a  If no conversion function existed, one could use the inductive relation $\approx_i$, but it does not easily allow rewrites.
 
-It allows us to break it up into 4 main lemmas: main proof
+\subsection{Main proof}
+
+% TODO wouldn't this work fine with the convert function instead??
+% The strength of the inductive relation $\approx_i$ is that it allows us to naturally break up a large $bytes\_bits\_lists$ proof into a proof involving several smaller $bytes\_bits\_lists$ proofs on inner arguments. That is, it is "propositionally compositional" or "backward compositional."
+
+HMAC code:
+$$HMAC_{H, K}(m) = H ( (k \oplus opad) | H ( k \oplus ipad | m )  ) $$
+
+The main equivalence theorem is as follows:
+
+We break up the proof naturally into four lemmas.
+
+This is done by a chain of implications.
+
+\begin{itemize}
+\item $split\_append\_id$
+\item $SHA\_equiv\_pad$ (depending on $fold\_equiv$)
+\item $concat\_equiv$
+\item $xor\_equiv\_Z$ (depending on $XorCorrespondence$, a proof by brute force)
+\end{itemize}
+
+\subsection{Inductive relation}
+The strength of the inductive relation $\approx_i$ is that it comes with a stronger induction principle that helps with low-level bit/byte proofs, especially those involving $xor$.
 
 \subsection{Other proof techniques}
 

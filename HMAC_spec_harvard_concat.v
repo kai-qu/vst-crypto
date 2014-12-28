@@ -802,7 +802,6 @@ Qed.
  *)
 
 Lemma SHA_equiv_pad : forall (bits : Blist) (bytes : list Z),
-                        (* add length assumptions here + intros them *)
                     bytes_bits_lists bits bytes ->
                     bytes_bits_lists
                       (hash_words_padded sha_h sha_iv sha_splitandpad bits)
@@ -918,8 +917,11 @@ Proof.
   simpl.
   
   (* Major lemmas *)
+  Check SHA_equiv_pad.
   apply SHA_equiv_pad.
+  Check concat_equiv.
   apply concat_equiv.
+  SearchAbout bytes_bits_lists.
   apply xor_equiv_Z; try assumption.
 
   *
@@ -930,6 +932,7 @@ Proof.
   - assumption.
     (* xors preserve length *)
     *
+      (* TODO split out this proof as lemma *)
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
       pose proof bytes_bits_length op (HMAC_SHA256.sixtyfour OP) as ops_len.
