@@ -77,14 +77,13 @@ The OpenSSL implementation of HMAC has been proven to correctly implement its co
 
 \section{Introduction}
 
-% Compelling quote or hook here TODO
-
 % TODO center this
 {\it In our opinion, many proofs in cryptography have become essentially unverifiable. Our field may be approaching a crisis of rigor.}  
 Bellare and Rogaway (2006) \\
 \\
 % add MIRI example here? http://intelligence.org/2013/10/03/proofs/
-There exists a gap between mathematical cryptography (rigorous paper proofs of correctness of an algorithm) and applied cryptography (implementing algorithms and studying their use). First, the paper proofs may be flawed, leading us to believe that algorithms are "safe to use" when they are not. Second, even if the proofs are right, they are accompanied by a specification of the algorithm only on paper. The concrete code implementing this specification may contain exploitable bugs, allowing adversaries to exploit memory leaks, buffer overflows, and man-in-the-middle attacks, such as in recent OpenSSL vulnerabilities.
+% remove parens from first sentence
+There exists a gap between mathematical cryptography (rigorous paper proofs of correctness of an algorithm) and applied cryptography (implementing algorithms and studying their use). First, the paper proofs may be flawed, leading us to believe that algorithms are "safe to use" when they are not. Second, even if the proofs are right, they are accompanied by a specification of the algorithm only on paper. The practical specification may differ from the academic version, introducing theoretical security flaws. Worse, concrete code implementing this specification may contain exploitable bugs, allowing adversaries to exploit memory leaks, buffer overflows, and man-in-the-middle attacks, such as in recent OpenSSL vulnerabilities.
 
 Recent work aims to close this gap. As a follow-up to Bellare and Rogaway 2006's probabilistic game framework, Halevi 2005 asserts that more cryptographic proofs are created than can be verified by humans. He advocates creating an "automated tool to help us with the mundane parts of writing and checking common arguments in our proofs." Barthe (2013, 2014) present such a  tool in the form of CertiCrypt, a framework that "enables the machine-checked construction and verification of code-based proofs." This paper continues in the spirit of formal verification. 
 
@@ -92,6 +91,7 @@ At a high level, this work in this paper is motivated by two purposes. First, th
 
 A collaborator on VST has formalized the Bellare 2006 proof on one specification of HMAC, an abstract one. Another collaborator on VST has formalized a proof that the OpenSSL implementation of HMAC implements a functional, concrete spec. We bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code is "safe to use."
 
+% TODO standardize diagram colors
 \begin{figure}[h!]
 	\centering
 	\includegraphics[scale=0.35]{Proof_edifice}
@@ -125,12 +125,12 @@ The Merkle-Damgard construction (referred to as "M-D" from now on) is a way to e
 \begin{figure}[h!]
 	\centering
 	\includegraphics[scale=0.24]{Merkle-Damgard}
-	\caption{The M-D construction.}
+	\caption{The Merkle-Damgard construction. IV stands for "initialization vector."}
 \end{figure}
 
 \subsection{SHA-256}
 
-SHA-256 is a popular cryptographic hash algorithm constructed via M-D. 
+SHA-256 is a popular cryptographic hash algorithm constructed via Merkle-Damgard.
 
 It operates on a message of any length by padding the message and breaking the result into 512-bit blocks. After iterating its internal compression function on each block, it outputs a 256-bit digest. 
 
@@ -169,13 +169,13 @@ OpenSSL includes an implementation of HMAC in C which calls the OpenSSL implemen
 	\caption{The entire system. It is slightly more correct to think of a "black box" HMAC taking message and key as input, and outputting the authentication code.}
 \end{figure}
 
-\subsection{Prior work}
+% \subsection{Prior work}
 
-Verification of SHA-256.
+% Verification of SHA-256.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{A tale of two specs}
+\section{Proofs of equality and equivalence}
 
 \subsection{The concrete HMAC spec}
 
@@ -261,7 +261,7 @@ where $|$ denotes concatenation and $[l_1, l_2]$ denote the two digits of the le
  Thus, $3$ is resolved by rewriting the abstract spec to incorporate $fpad$ and $splitAndPad$ into a single padding function included in the hash function, much like SHA-256 does.
 \eqn{ hash\_words\_padded := \\ hash\_words \circ split\_and\_pad}
 
-As summarized in the previous section, $fpad$ is used to pad the output size $c$ to the block size $b$. $splitAndPad$ is used to split the variable-length message (of type $Blist$) into a list of blocks, each size $b$, padding it along the way. $fpad$ is instantiated as a constant, since we know that the length of the message is $c < b$. $splitAndPad$ is instantiated as the normal SHA padding function, but tweaked to add one block size to the length appended in $[l_1, l_2]$, since $k_in$ (length of one block) will be pre-pended to it later.
+As summarized in the previous section, $fpad$ is used to pad the output size $c$ to the block size $b$. $splitAndPad$ is used to split the variable-length message (of type $Blist$) into a list of blocks, each size $b$, padding it along the way. $fpad$ is instantiated as a constant, since we know that the length of the message is $c < b$. $splitAndPad$ is instantiated as the normal SHA padding function, but tweaked to add one block size to the length appended in $[l_1, l_2]$, since $k_{in}$ (with a length of one block) will be pre-pended to it later.
 
 $2$ is resolved by changing all $Bvector \s n$ to $Blist$, then proving that all functions preserve the length of the list when needed. This maintains the $Bvector \s n$ invariant that its length is always $n$.
 
@@ -303,7 +303,7 @@ bytes\_bits\_lists \textrm{ } b \textrm{ } B.
 
 where $bytes\_bits\_lists : Blist \rightarrow list \textrm{ } Z \rightarrow Prop$ creates an "assertion" that $b$ and $B$ are related in this way, together with two constructors used to provide evidence to prove the assertion. (For more on inductively defined propositions, see the $Prop$ chapter in the Coq textbook "Software Foundations.")
 
-% TODO fix formatting
+% TODO fix formatting, maybe embed inline
 \lstinputlisting[firstline=27, lastline=34]{../ByteBitRelations.v}
 
 The inductive and computational definitions have been proven equivalent in the sense that 
@@ -355,7 +355,6 @@ Indeed, we have proven that $bitsToBytes \circ bytesToBits = id$. Note that it d
 A natural extension is to prove output equivalence on repeated application of the wrapped functions, or iteration:
 
 \lstinputlisting[firstline=78, lastline=82]{../HMAC_spec_parameters.v}
-
 \eqn{
 Lemma \spc iterate\_equiv : \\
   \forall  \spc (x : A) \spc (X : B)\\
@@ -385,7 +384,7 @@ The only differences are that the functions in question take multiple inputs, th
 
 One wonders whether this "one-way roundtrip" property has been formalized elsewhere, perhaps in a Coq abstract algebra library. We found that the concepts of Galois connections and setoids were similar, but not useful.
 
-In sum, the computational relation $\approx_c$ makes abstract reasoning easy precisely because it is computational, so one can rewrite using equality in proofs. It can loosely be called "computationally compositional" since we start with a  If no conversion function existed, one could use the inductive relation $\approx_i$, but it does not easily allow rewrites.
+In sum, the computational relation $\approx_c$ makes abstract reasoning easy precisely because it is computational, so one can rewrite using equality in proofs. If no conversion function existed, one could use the inductive relation $\approx_i$, but it does not easily allow rewrites. The strength of $\approx_i$ will be discussed in the next section.
 
 \subsection{The proof of equivalence}
 
@@ -428,12 +427,20 @@ b \approx B \rightarrow  \\
 f \approx_w F \rightarrow \\
 f \spc b \approx F \spc B.}
 
-The proof is completed by backward-chaining these implications. A diagram of the chain may be found at the end of the Appendix. The diagram makes it clear that in the end, the leaves of the tree are the sole propositions that need to be proved, and these are exactly the givens: $k \approx K, m \approx M, op \approx OP,$ and $ip \approx IP$.
+The proof is completed by backward-chaining these implications. The diagram makes it clear that in the end, the leaves of the tree are the sole propositions that need to be proved, and these are exactly the givens: $k \approx K, m \approx M, op \approx OP,$ and $ip \approx IP$.
+
+% TODO inline graphic
+ \begin{figure}[h!]
+ 	\centering
+ 	\includegraphics[scale=0.21]{HMAC_spec_equiv}
+ 	\caption{$a \xrightarrow{T} b$ means "By $T$, $b$ implies $a$." Note after HMAC has been unpacked, all that is left is our assumptions.}
+ \end{figure}
 
 The theorem about $|$, $concat\_equiv$, is easy to prove by induction. \\
 \indent
 The theorem about $\oplus$, $xor\_equiv\_Z$, is slightly harder. It uses the inductive relation and depends on several lemmas in $XorCorrespondence$, including a large proof by brute force. The proofs use the inductive relation $\approx_i$ because it comes with a stronger induction principle that allows us to break up the input bit/byte lists correctly to perform induction, since eight bits correspond to one byte.
 \indent
+
 Lastly, the theorem about $H$, $SHA\_equiv\_pad$, depends on $fold\_equiv$. $fold\_equiv$ requires a messy double induction that requires definition and use of the $InBlocks \s n$ inductive proposition. This is necessary because one list is in blocks of 512 bits and the other is in blocks of 16 integers.
 
 In addition to the main theorems, the equivalence proof involves about 45 more lemmas.
@@ -442,13 +449,15 @@ In addition to the main theorems, the equivalence proof involves about 45 more l
 
 The following techniques may be useful for future Coq developments.
 
-\begin{itemize}
-\item Many theorems are true for lists of any length (e.g. some involving map and zip). We found it difficult to do induction on $Bvector \s n$, dependent type induction, since its length is fixed. Instead, we found it easy to prove theorems by induction on a Blist, implying that the list may be any length, then specialize it to \verb|Bvector n|, a Blist of length $n$. 
-\item Likewise, we found it easier to prove theorems about lists of any length (or a certain length given by an assumption), then prove that the functions involved preserve the length. This is equivalent to working with \verb|Bvector n|. % TODO add examples
-\item When dealing with lists whose lengths must be a multiple of a block size (e.g. 512 bits or 64 bytes), we found it useful to define an inductive proposition $InBlocks \s n$ that would allow one to do proofs by inducting in the block size, cons'ing elements to the front. This allows an easier induction on bit/byte lists, since 512 bits correspond to 64 bytes. We then proved $InBlocks \s n$ equivalent to the computational version (using the length function). % code here
-\item Likewise, we found it useful to define both inductive and computational definitions, as covered in the previous sections: a function to compute conversions between byte lists and bit lists, and an inductive proposition stating the existence of bits such that the two lists correspond.
-\item When it comes to theorems that involve tricky math, we exploited the fact that range of a byte is $[0, 255]$ and proved them by brute force instead. The same technique also works in reverse. Proving something true for $8$ booleans is as simple as checking that the statement is true for each of the $256$ cases. % code here
-\end{itemize}
+Many theorems are true for lists of any length (e.g. some involving map and zip). We found it difficult to do induction on $Bvector \s n$, dependent type induction, since its length is fixed. Instead, we found it easy to prove theorems by induction on a Blist, implying that the list may be any length, then specialize it to \verb|Bvector n|, a Blist of length $n$. 
+
+Likewise, we found it easier to prove theorems about lists of any length (or a certain length given by an assumption), then prove that the functions involved preserve the length. This is equivalent to working with \verb|Bvector n|. % TODO add examples
+
+When dealing with lists whose lengths must be a multiple of a block size (e.g. 512 bits or 64 bytes), we found it useful to define an inductive proposition $InBlocks \s n$ that would allow one to do proofs by inducting in the block size, cons'ing elements to the front. This allows an easier induction on bit/byte lists, since 512 bits correspond to 64 bytes. We then proved $InBlocks \s n$ equivalent to the computational version (using the length function). % code here
+
+Likewise, we found it useful to define both inductive and computational definitions, as covered in the previous sections: a function to compute conversions between byte lists and bit lists, and an inductive proposition stating the existence of bits such that the two lists correspond.
+
+When it comes to theorems that involve tricky math, we exploited the fact that range of a byte is $[0, 255]$ and proved them by brute force instead. The same technique also works in reverse. Proving something true for $8$ booleans is as simple as checking that the statement is true for each of the $256$ cases. % code here
 
 \subsection{Problems encountered}
 
@@ -514,7 +523,7 @@ Lastly, we present our chain of successful formalizations in hopes that it will 
 
 \subsection{Future work}
 
-In the fields of formal verification and programming languages, more libraries could be written to aid reasoning about equivalence and lengths, as well as facilitate type-level programming in Coq. We anticipate that future proofs bridging paper proofs with code will run into many of the same problems that we did.
+In the fields of formal verification and programming languages, more libraries could be written to aid reasoning about equivalence and lengths, as well as facilitate type-level programming in Coq. We anticipate that future work bridging paper proofs with code will run into many of the same problems that we did.
 
 In the field of cryptography, much interesting work is being done now on techniques, frameworks, and formalization of cryptographic protocols and algorithms. See EasyCrypt, Barthe's CertiCrypt, Petcher's MCF, and other work coming from IMDEA. Of course, the question of whether SHA-256 is a pseudo-random function is yet unresolved.
 
@@ -598,14 +607,5 @@ OpenSSL HMAC and SHA-256 code
 
 See the repository at \\ \verb|github.com/hypotext/vst-crypto|.
 
-\subsection{Main HMAC equivalence proof}
-% TODO inline graphic
-On next page. \\
-
- \begin{figure}[h!]
- 	\centering
- 	\includegraphics[scale=0.3]{HMAC_spec_equiv}
- 	\caption{$a \xrightarrow{T} b$ means "By $T$, $b$ implies $a$." Note after HMAC has been unpacked, all that is left is our assumptions.}
- \end{figure}
 
 \end{document}
