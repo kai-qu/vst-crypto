@@ -88,3 +88,30 @@ Lemma iterate_equiv :
     f = wrap F ->
     X = roundtrip X ->
     iterate n f x = convert_BA (iterate n F X).
+
+  (* ------ fold vs. iterate *)
+
+Function hash_blocks_bits
+         (hash_block_bit : Blist -> Blist -> Blist) (r: Blist)
+         (msg: Blist) {measure length msg} : Blist :=
+  match msg with
+  | nil => r
+  | _ => hash_blocks_bits
+           hash_block_bit
+           (hash_block_bit r (firstn 512 msg)) (skipn 512 msg)
+  end.
+
+  Definition h_star (k : Bvector c)
+             (m : list (Bvector b)) : Bvector c :=
+    fold_left h m k.
+
+  Definition hash_words : list (Bvector b) -> Bvector c := h_star iv.
+
+  (* ---- *)
+
+Definition HMAC_2K (k : Bvector (b + b)) (m : Blist) :=
+    GHMAC_2K k (splitAndPad m).
+
+  Definition HMAC (k : Bvector b) :=
+    HMAC_2K (Vector.append (BVxor _ k opad) (BVxor _ k ipad)).
+

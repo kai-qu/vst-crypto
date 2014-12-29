@@ -176,11 +176,11 @@ Verification of SHA-256.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{The proof of equivalence}
+\section{A tale of two specs}
 
 \subsection{The concrete HMAC spec}
 
-This spec was written to conform to RFC 2104; thus, it contains runnable code, operates on byte lists, and returns a byte list. The spec distinguishes between the $Z$ type and the $byte$ type (values of type $Z$ in range $[0, 256)$); however, we will use $Z$ synonymously with $byte$ with the understanding that all values are in range.
+This spec was written to conform to RFC 2104 (the government's English description of the algorithm); thus, it contains runnable code, operates on byte lists, and returns a byte list. The spec distinguishes between the $Z$ type and the $byte$ type (values of type $Z$ in range $[0, 256)$); however, we will use $Z$ synonymously with $byte$ with the understanding that all values are in range.
 
 The spec is constructed to work with generic cryptographic hash functions. We will instantiate it with the $SHA$-$256$ functional program, which we treat as a black box that takes care of the message padding and compression function iteration.
 
@@ -213,13 +213,27 @@ The fourth assumption can be seen in this definition of the $SHA$-$256$ analogue
 
 \lstinputlisting[firstline=23, lastline=28]{../HMAC_spec_parameters.v}
 
-However, $SHA$-$256$ includes a padding function for the message, while this spec's use of dependent types ($Bvector \textrm{ } n$) forces the use of two types of ad-hoc padding, the functions $app\_fpad$ and $splitAndPad$.
+However, $SHA$-$256$ includes a padding function for the message, while this spec's use of dependent types ($Bvector \textrm{ } n$) forces the use of two types of ad-hoc padding, the functions $app\_fpad$ and $splitAndPad$. 
 
 \lstinputlisting[firstline=55, lastline=59]{../HMAC_spec_abstract.v}
 
+\lstinputlisting[firstline=112, lastline=113]{../HMAC_spec_parameters.v}
+
+\lstinputlisting[firstline=115, lastline=116]{../HMAC_spec_parameters.v}
+
+$fpad$ is used to pad the output size $c$ to the block size $b$. $splitAndPad$ is used to split the variable-length message (of type $Blist$) into a list of blocks, each size $b$, padding it along the way.
+
 \subsection{Proof outline}
 
-Equivalence of specs means 
+There are six main differences between the concrete and abstract specs:
+\begin{enumerate} 
+\item the abstract spec operates on bit lists, whereas the concrete spec operates on byte lists.
+\item the abstract spec uses the dependent type \verb|Bvector n|, which is a bit list of length $n$, whereas the concrete spec uses byte lists and int lists.
+\item due to its use of dependent types, the abstract spec pads its input twice in an ad-hoc manner, whereas the concrete spec uses the SHA-256 padding function consistently.
+\item the concrete spec treats the hash function (SHA-256) as a black box, whereas the abstract spec exposes various parts of its functionality, such as its initialization vector, internal compression function, and manner of iteration.
+\item the abstract spec does an explicit fold over the message, which is now a list of blocks, not a list of pure bits.
+\item the abstract spec defines HMAC via the HMAC\_2K and GHMAC\_2K structures, not directly. 
+\end{enumerate}
 
 \begin{figure}[h!]
 	\centering
@@ -227,16 +241,34 @@ Equivalence of specs means
 	\caption{Stages of the equivalence/equality proofs.}
 \end{figure}
 
-Again, the main differences between the specs are that (TODO make a table)
-\begin{enumerate} 
-\item GNMAC and GHMAC\_2K structures
-\item the abstract spec operates on bits, whereas the concrete spec operates on bytes
-\item the abstract spec uses the dependent type \verb|Bvector n|, which is a bit list of length $n$, whereas the concrete spec uses byte lists and int lists
-\item the abstract spec pads its input twice in an ad-hoc manner, whereas the concrete spec uses the SHA-256 padding function consistently
-\item the SHA-256 concrete spec uses the Z type, whereas the HMAC concrete type uses the byte type, which is Z constrained to be in $[0, 255]$.
-\end{enumerate}
+% TODO reorder these
+They are ranked in rough order of most difficult to least difficult. No difficulty is too great to be overcome--we believe the specs are not "fundamentally different" and that they can be linked via proof. Indeed, a goal of this project was to find and remove differences in the process of proof.
 
-We solve some of them by massaging the two specs in the "same direction."
+The last, $6$, is easily resolved by unfolding the definitions of HMAC\_2K and GHMAC\_2K. We solve the other five by changing definitions and massaging the two specs in the "same direction," proving equality each time.
+
+$5$ is resolved by concatenating the $list \s(Bvector \s b)$ in $hash\_words$ below. Then it can be seen that iterating $firstn \s b$ and $splitn \s b$ over the concatenated list is equal to left-folding over the list of blocks.
+
+\lstinputlisting[firstline=94, lastline=102]{../HMAC_spec_parameters.v}
+
+\lstinputlisting[firstline=104, lastline=108]{../HMAC_spec_parameters.v}
+
+$4$ is not too difficult. Its explicit fold (as iteration method) can be proven equal to the iteration method using $firstn$ and $splitn$ in the concrete SHA-256 spec, as seen in $3$ above. It suffices to convert the SHA\_256 initialization vector and wrap its internal compression function. See $1$ and the next section for an elaboration on conversion and wrapping.
+
+Before iterating the compression function on the message, SHA-256 pads it in a standard, one-to-one fashion so its length is a multiple of the block size. It pads it as such:
+\eqn{msg\s | \s [1] \s | \s [0, 0, \ldots 0] \s | \s [l_1, l_2]}
+
+where $|$ denotes concatenation and $[l_1, l_2]$ denote the two digits of the length of the message as a 64-bit integer. The number of $0$s is calculated such that the length of the entire padded message is a multiple of the block size. 
+
+ Thus, $3$ is resolved by rewriting the abstract spec to incorporate $fpad$ and $splitAndPad$ into a single padding function included in the hash function, much like SHA-256 does.
+\eqn{ hash\_words\_padded := \\ hash\_words \circ split\_and\_pad}
+
+As summarized in the previous section, $fpad$ is used to pad the output size $c$ to the block size $b$. $splitAndPad$ is used to split the variable-length message (of type $Blist$) into a list of blocks, each size $b$, padding it along the way. $fpad$ is instantiated as a constant, since we know that the length of the message is $c < b$. $splitAndPad$ is instantiated as the normal SHA padding function, but tweaked to add one block size to the length appended in $[l_1, l_2]$, since $k_in$ (length of one block) will be pre-pended to it later.
+
+$2$ is resolved by changing all $Bvector \s n$ to $Blist$, then proving that all functions preserve the length of the list when needed. This maintains the $Bvector \s n$ invariant that its length is always $n$.
+
+$1$ is the most difficult; since the types of each HMAC function differ, it requires an equivalence proof rather than an equality proof. It is discussed in the next section. 
+
+A minor difference also exists between the SHA-256 concrete spec, which uses the $Z$ type, and the HMAC concrete spec which uses the $byte$ type (range-constrained $Z$). This is resolved by asserting and proving that $\forall x:Z, x \in [0, 255]$ wherever needed.
 
 %%%%%
 \subsection{Bridging bytes and bits}
@@ -350,32 +382,62 @@ Lemma \s fold\_equiv\_blocks : \\
       hash\_blocks\_bits \s sha\_h \s acc \s l \s \approx_c SHA256.hash\_blocks \s ACC \s L.
 }	
 
-The only differences are that the functions in question take multiple inputs, the length of $L$ must be a multiple of 16 (the block size for the $Integer$ type, 512 bits), and the method of iteration is slightly modified to be parametrized by the length of the input list ($firstn$, $skipn$). $sha_h$ contains the wrapped $SHA256.hash_block$ function. The code for the proof is in $HMAC\_spec\_concat.v$.
+The only differences are that the functions in question take multiple inputs, the length of $L$ must be a multiple of 16 (the block size for the $Integer$ type, 512 bits), and the method of iteration is slightly modified to be parametrized by the length of the input list ($firstn$, $skipn$). $sha\_h$ contains the wrapped $SHA256.hash\_block$ function. $hash\_blocks\_bits$ is a version of $SHA256.hash\_blocks$ modified to use 512 as its block size. The code for the proof is in $HMAC\_spec\_concat.v$.
 
-(One wonders whether this "one-way roundtrip" property has been formalized elsewhere, perhaps in a Coq abstract algebra library. We found that the concepts of Galois connections and setoids were similar, but not useful.)
+One wonders whether this "one-way roundtrip" property has been formalized elsewhere, perhaps in a Coq abstract algebra library. We found that the concepts of Galois connections and setoids were similar, but not useful.
 
 In sum, the computational relation $\approx_c$ makes abstract reasoning easy precisely because it is computational, so one can rewrite using equality in proofs. It can loosely be called "computationally compositional" since we start with a  If no conversion function existed, one could use the inductive relation $\approx_i$, but it does not easily allow rewrites.
 
-\subsection{Main proof}
+\subsection{The proof of equivalence}
 
-% TODO wouldn't this work fine with the convert function instead??
-% The strength of the inductive relation $\approx_i$ is that it allows us to naturally break up a large $bytes\_bits\_lists$ proof into a proof involving several smaller $bytes\_bits\_lists$ proofs on inner arguments. That is, it is "propositionally compositional" or "backward compositional."
+The main equivalence theorem is as follows. The symbol $\approx$ will be used to represent either relation ($\approx_c, \approx_i$) interchangeably. 
+\eqn{
+Theorem \s HMAC\_spec\_equiv : \\
+\forall
+                            (k \s m \s h : Blist) (op \s ip : Blist) \\
+                            (K \s M \s H : list \s Z) (OP \s IP : list \s Z), \\
+  length \s K = SHA256.BlockSize \rightarrow \\
+  k \approx K \rightarrow \\
+  m \approx M \rightarrow \\
+  op \approx OP \rightarrow \\
+  ip \approx IP \rightarrow \\
+  HMAC \s c \s p \s sha\_h \s sha\_iv \s sha\_splitandpad \s op \s ip \s k \s m = h \rightarrow \\
+  HMAC\_SHA256.HMAC \s IP \s OP \s M \s K = H \rightarrow \\
+  h \approx H.
+}
 
-HMAC code:
+Note that the following are implicit: 
+\eqn{
+	sha\_iv \approx_c SHA256.init\_registers \\
+	sha\_h \approx_w SHA256.hash\_block \\
+	sha\_splitandpad \approx_w sha\_padding\_lemmas.pad
+}
+
+$sha\_padding\_lemmas.pad$ is a version of $SHA256.generate\_and\_pad$, the padding function defined in FIPS 180-4, modified here to separate the padding from the $Z \rightarrow Integer$ conversion. $hash\_blocks\_bits$ is a version of $SHA256.hash\_blocks$ modified to use 512 as its block size. 	
+
+As a refresher, here is the HMAC code:
 $$HMAC_{H, K}(m) = H ( (k \oplus opad) | H ( k \oplus ipad | m )  ) $$
+% bits
+% $$HMAC_{H, K}(m) = H ( (k \oplus opad) | H ( k \oplus ipad | m )  ) $$
 
-The main equivalence theorem is as follows:
+Section IIc discussed the series of transformations applied to the abstract spec. Its structure was originally not close to the HMAC and SHA code, but after some massaging, it and its internal hash function become structurally similar enough to the high-level code for the proof to be  decomposed by function.
 
-We break up the proof naturally into four lemmas.
+Three functions occur in the definition of HMAC: \\ $H$ (hashing), $|$ (concatenation), and $\oplus$ (bitwise xor). Thus, the proof breaks up naturally and modularly into three theorems. For each function, its theorem states that the output is equivalent given that the input is equivalent. 
+\eqn{
+Lemma \s f\_equiv : \forall (b : bits) (B : bytes), \\
+b \approx B \rightarrow  \\
+f \approx_w F \rightarrow \\
+f \spc b \approx F \spc B.}
 
-This is done by a chain of implications.
+The proof is completed by backward-chaining these implications. A diagram of the chain may be found at the end of the Appendix. The diagram makes it clear that in the end, the leaves of the tree are the sole propositions that need to be proved, and these are exactly the givens: $k \approx K, m \approx M, op \approx OP,$ and $ip \approx IP$.
 
-\begin{itemize}
-\item $split\_append\_id$
-\item $SHA\_equiv\_pad$ (depending on $fold\_equiv$)
-\item $concat\_equiv$
-\item $xor\_equiv\_Z$ (depending on $XorCorrespondence$, a proof by brute force)
-\end{itemize}
+The theorem about $|$, $concat\_equiv$, is easy to prove by induction. \\
+\indent
+The theorem about $\oplus$, $xor\_equiv\_Z$, is slightly harder. It uses the inductive relation and depends on several lemmas in $XorCorrespondence$, including a large proof by brute force. \\
+\indent
+Lastly, the theorem about $H$, $SHA\_equiv\_pad$, depends on $fold\_equiv$. $fold\_equiv$ requires a messy double induction that requires definition and use of the $InBlocks \s n$ inductive proposition. This is necessary because one list is in blocks of 512 bits and the other is in blocks of 16 integers.
+
+In addition to the main theorems, the equivalence proof involves about 45 more lemmas.
 
 \subsection{Inductive relation}
 The strength of the inductive relation $\approx_i$ is that it comes with a stronger induction principle that helps with low-level bit/byte proofs, especially those involving $xor$.
@@ -386,10 +448,10 @@ The following techniques may be useful in future equivalence proofs.
 
 \begin{itemize}
 \item Many theorems are true for lists of any length (e.g. some involving map and zip). We found it difficult to do dependent type induction. Instead, we found it easy to prove theorems by induction on a Blist, implying that the list may be any length, then specialize it to \verb|Bvector n|, a Blist of length $n$. 
-\item Likewise, we found it easier to prove theorems about lists of any length (or a certain length given by an assumption), then prove that the functions involved preserve the length. This is equivalent to working with \verb|Bvector n|.
-\item When dealing with lists whose lengths must be a multiple of a block size (e.g. 512 bits or 64 bytes), we found it useful to define an inductive proposition \verb|InWords n l| that would allow one to do proofs by inducting in the block size, cons'ing elements to the front. We then proved this equivalent to the computational version (using the length function).
+\item Likewise, we found it easier to prove theorems about lists of any length (or a certain length given by an assumption), then prove that the functions involved preserve the length. This is equivalent to working with \verb|Bvector n|. % TODO add examples
+\item When dealing with lists whose lengths must be a multiple of a block size (e.g. 512 bits or 64 bytes), we found it useful to define an inductive proposition \verb|InWords n l| that would allow one to do proofs by inducting in the block size, cons'ing elements to the front. We then proved this equivalent to the computational version (using the length function). % code here
 \item Likewise, we found it useful to define two things: a function to compute conversions between byte lists and bit lists, and an inductive proposition stating that the lists correspond in this way.
-\item When it comes to theorems that involve tricky math, we exploited the fact that range of a byte is $[0, 255]$ and proved them by brute force instead. The same technique also works in reverse. Proving something true for $8$ booleans is as simple as checking that the statement is true for each of the $256$ cases.
+\item When it comes to theorems that involve tricky math, we exploited the fact that range of a byte is $[0, 255]$ and proved them by brute force instead. The same technique also works in reverse. Proving something true for $8$ booleans is as simple as checking that the statement is true for each of the $256$ cases. % code here
 \end{itemize}
 
 \subsection{Problems encountered}
@@ -522,6 +584,7 @@ OpenSSL HMAC and SHA-256 code
 
 \lstinputlisting[firstline=27, lastline=34]{../ByteBitRelations.v}
 
+% TODO realign code
 \subsection{The equivalence proof}
 
 \lstinputlisting[firstline=858]{../HMAC_spec_harvard_concat.v}
@@ -529,5 +592,15 @@ OpenSSL HMAC and SHA-256 code
 \subsection{Selected theorems and proofs}
 
 See the repository at \\ \verb|github.com/hypotext/vst-crypto|.
+
+\subsection{Main HMAC equivalence proof}
+% TODO inline graphic
+On next page.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale=0.45]{HMAC_spec_equiv}
+	\caption{$a \xrightarrow{T} b$ means "By $T$, $b$ implies $a$." Note after HMAC has been unpacked, all that is left is our assumptions.}
+\end{figure}
 
 \end{document}
