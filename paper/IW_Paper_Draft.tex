@@ -6,25 +6,15 @@
 % Feel free to distribute this example, but please keep the referral
 % to writelatex.com
 % 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% How to use writeLaTeX: 
-%
-% You edit the source code here on the left, and the preview on the
-% right shows you the result within a few seconds.
-%
-% Bookmark this page and share the URL with your co-authors. They can
-% edit at the same time!
-%
-% You can upload figures, bibliographies, custom classes and
-% styles using the files menu.
-%
-% If you're new to LaTeX, the wikibook is a great place to start:
-% http://en.wikibooks.org/wiki/LaTeX
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \documentclass[twocolumn,showpacs,%
   nofootinbib,aps,superscriptaddress,%
   eqsecnum,prd,notitlepage,showkeys,10pt]{revtex4-1}
+
+\usepackage{natbib}
+% \usepackage[square,numbers]{natbib} % TODO
+\bibliographystyle{unsrtnat}
 
 % displays all math in sans-serif font TODO  
 \usepackage[cm]{sfmath}
@@ -63,10 +53,10 @@ breaklines=true
 \affiliation{Princeton University}
 
 \begin{abstract}
-The OpenSSL implementation of HMAC has been proven to correctly implement its concrete specification. HMAC uses SHA-256 as its hash function, and the SHA-256 program has also been proven to correctly implement its specification. At a higher level, HMAC has been proven "safe to use": an abstract specification of HMAC has been proven to be a pseudo-random function given that its internal compression function is one as well. We bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code is "safe to use."
+The OpenSSL implementation of HMAC has been proven to correctly implement its concrete specification. HMAC uses SHA-256 as its hash function, and the SHA-256 program has also been proven to correctly implement its specification. At a higher level, HMAC has been proven secure: an abstract specification of HMAC has been proven to be a pseudo-random function given that its internal compression function is one as well. We bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code is secure.
 \\
 \indent
-(December 29, 2014)
+(January 4, 2015)
 % TODO shorten abstract
 
 \end{abstract}
@@ -79,17 +69,17 @@ The OpenSSL implementation of HMAC has been proven to correctly implement its co
 
 % TODO center this
 {\it In our opinion, many proofs in cryptography have become essentially unverifiable. Our field may be approaching a crisis of rigor.}  
-Bellare and Rogaway (2006) \\
+Bellare and Rogaway (2004) \\
 \\
 % add MIRI example here? http://intelligence.org/2013/10/03/proofs/
 % remove parens from first sentence
-There exists a gap between mathematical cryptography (rigorous paper proofs of correctness of an algorithm) and applied cryptography (implementing algorithms and studying their use). First, the paper proofs may be flawed, leading us to believe that algorithms are "safe to use" when they are not. Second, even if the proofs are right, they are accompanied by a specification of the algorithm only on paper. The practical specification may differ from the academic version, introducing theoretical security flaws. Worse, concrete code implementing this specification may contain exploitable bugs, allowing adversaries to exploit memory leaks, buffer overflows, and man-in-the-middle attacks, such as in recent OpenSSL vulnerabilities.
+There exists a gap between mathematical cryptography (rigorous paper proofs of correctness of an algorithm) and applied cryptography (implementing algorithms and studying their use). First, the paper proofs may be flawed, leading us to believe that algorithms are secure when they are not. Second, even if the proofs are right, they are accompanied by a specification of the algorithm only on paper. The practical specification may differ from the academic version, introducing theoretical security flaws. Worse, concrete code implementing this specification may contain exploitable bugs, allowing adversaries to exploit memory leaks, buffer overflows, and man-in-the-middle attacks, such as in recent OpenSSL vulnerabilities.
 
-Recent work aims to close this gap. As a follow-up to Bellare and Rogaway 2006's probabilistic game framework, Halevi 2005 asserts that more cryptographic proofs are created than can be verified by humans. He advocates creating an "automated tool to help us with the mundane parts of writing and checking common arguments in our proofs." Barthe (2013, 2014) present such a  tool in the form of CertiCrypt, a framework that "enables the machine-checked construction and verification of code-based proofs." This paper continues in the spirit of formal verification. 
+Recent work aims to close this gap. As a follow-up to Bellare and Rogaway (2006)'s probabilistic game framework, Halevi (2005) asserts that more cryptographic proofs are created than can be verified by humans. He advocates creating an "automated tool to help us with the mundane parts of writing and checking common arguments in our proofs." Barthe (2013, 2014) presents such a tool in the form of CertiCrypt, a framework that "enables the machine-checked construction and verification of code-based proofs." This paper continues in the spirit of formal verification. 
 
-At a high level, this work in this paper is motivated by two purposes. First, the Verified Software Toolchain (VST) project has built the framework to apply the Verifiable C program logic to C programs. Appel 2015 has completed a formal, machine-checked verification of the SHA-256 implementation in OpenSSL. HMAC, which is constructed from a cryptographic hash function, is a natural extension of the existing SHA-256 work. Second, some controversy surrounds the Bellare 2006 proof of HMAC's security due to inconsistencies between the "proof version" and the "standardized version" of HMAC. We hope to shed some light on this "HMAC brawl."
+At a high level, this work in this paper is motivated by two purposes. First, the Verified Software Toolchain (VST) project has built the framework to apply the Verifiable C program logic to C programs. Appel (2015) has completed a formal, machine-checked verification of the SHA-256 implementation in OpenSSL. HMAC, which is constructed from a cryptographic hash function, is a natural extension of the existing SHA-256 work. Second, some controversy surrounds Bellare's 2006 proof of HMAC's security due to inconsistencies between the "proof version" and the "standardized version" of HMAC. We hope to shed some light on this "HMAC brawl."
 
-A collaborator on VST has formalized the Bellare 2006 proof on one specification of HMAC, an abstract one. Another collaborator on VST has formalized a proof that the OpenSSL implementation of HMAC implements a functional, concrete spec. We bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code is "safe to use."
+Petcher (2015) has formalized Bellare's 2006 proof on one specification of HMAC, an abstract one. Another collaborator, Beringer (2015), has formalized a proof that the OpenSSL implementation of HMAC implements a functional, concrete spec. We bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code is secure.
 
 % TODO standardize diagram colors
 \begin{figure}[h!]
@@ -104,7 +94,7 @@ Coq is a proof assistant in which every proof step is checked by the small, trus
 
 Coq has two internal languages, Gallina and the tactic language. Gallina is a purely functional language similar to OCaml. The tactic language is used for doing proofs and defining new proof strategies.
 
-As used here, formal verification of a piece of code means proving that this implementation fulfills some kind of high-level specification. The code will usually be written in a low-level language such as C and may contain optimizations and other tricks. The specification, or "spec," will usually be written in a high-level language such as OCaml or Gallina and is typically more mathematical and abstract. As Appel 2015 notes, "A program without a specification {\it cannot be incorrect}, it can only be surprising."
+As used here, formal verification of a piece of code means proving that this implementation fulfills some kind of high-level specification. The code will usually be written in a low-level language such as C and may contain optimizations and other tricks. The specification, or "spec," will usually be written in a high-level language such as OCaml or Gallina and is typically more mathematical and abstract. As Appel (2015) notes, "A program without a specification {\it cannot be incorrect}, it can only be surprising."
 
 % TODO insert VFA code
 For example, one may specify that the English description "to be sorted" is equal to two mathematical properties, perhaps written in Gallina or OCaml:
@@ -140,7 +130,7 @@ Like all such hash functions, it comes with guarantees of pre-image resistance, 
 
 SHA-256 provides only a guarantee of integrity; that is, a guarantee the message has not been tampered with. A message authentication code (MAC) is used to guarantee both integrity and authenticity, the latter meaning that the message's origin is the expected sender. Sender and receiver need only exchange a secret key before beginning their communication. In addition, whereas SHA-256 is vulnerable to length-extension attacks, HMAC is not.
 
-To accomplish this, HMAC (a "hash-based message authentication code") was designed in Bellare 1996. It includes a proof that the HMAC protocol (described below) is a pseudo-random function (PRF) on its inputs given that the underlying hash primitive is a PRF, a proof which was improved in Bellare 2006. In SHA-256, the underlying hash primitive would be its compression function.
+To accomplish this, HMAC (a "hash-based message authentication code") was designed by Bellare (1996). It includes a proof that the HMAC protocol (described below) is a pseudo-random function (PRF) on its inputs given that the underlying hash primitive is a PRF, a proof which was improved by Bellare (2006). In SHA-256, the underlying hash primitive would be its compression function.
 % TODO different MAC security requirements
 
 To compute the authentication code of a message, RFC 2104 defines HMAC as the following action:
@@ -179,16 +169,18 @@ OpenSSL includes an implementation of HMAC in C which calls the OpenSSL implemen
 
 \subsection{The concrete HMAC spec}
 
-This spec was written to conform to RFC 2104 (the government's English description of the algorithm); thus, it contains runnable code, operates on byte lists, and returns a byte list. The spec distinguishes between the $Z$ type and the $byte$ type (values of type $Z$ in range $[0, 256)$); however, we will use $Z$ synonymously with $byte$ with the understanding that all values are in range.
+% TODO it is called the concrete spec because...
+Beringer (2015) wrote the spec to conform to RFC 2104 (IETF's English description of the algorithm); thus, it contains runnable code, operates on byte lists, and returns a byte list. The spec distinguishes between the $Z$ type and the $byte$ type (values of type $Z$ in range $[0, 256)$); however, we will use $Z$ synonymously with $byte$ with the understanding that all values are in range.
 
 The spec is constructed to work with generic cryptographic hash functions. We will instantiate it with the $SHA$-$256$ functional program, which we treat as a black box that takes care of the message padding and compression function iteration.
 
-The code for this spec and the next is in the Appendix.
+The code for this spec and the next is in the Appendix. % TODO note about location of all code
 
 \subsection{The abstract HMAC spec}
 
-% TODO elaborate on Bellare stuff
-This spec was written to conform to the HMAC protocol defined in Bellare 1996; thus, to be as general as possible, it operates on bit vectors and returns a bit vector. (A bit vector $Bvector \textrm{ } n$ is a type dependent on a natural number value $n$, the length of the vector.)
+% TODO elaborate on Bellare stuff and what exactly they say about it in the paper
+% TODO it is called the abstract spec because...
+Petcher (2015) wrote the spec to conform to the HMAC protocol defined by Bellare (1996); thus, to be as general as possible, it operates on bit vectors and returns a bit vector. (A bit vector $Bvector \textrm{ } n$ is a type dependent on a natural number value $n$, the length of the vector.)
 
 It defines HMAC via the two-keyed HMAC ($HMAC\_2K$) and generalized HMAC ($GHMAC\_2K$) structures, rather than straightforwardly as the concrete spec does. It also includes an implementation of generalized NMAC ($GNMAC$), another structure used in the proof.
 
@@ -204,6 +196,7 @@ The proof depends on the following assumptions that are explicit in the spec:
 \item $opad \neq ipad$ (they differ in at least one bit)
 \item the padding function $splitAndPad$ is one-to-one
 \item the hash function (e.g. $SHA$-$256$) is an iterated version of the compression function, a la Merkle-Damgard.
+% TODO a la
 \end{enumerate}
 
 as well as other implicit assumptions explained in Section III.
@@ -241,7 +234,8 @@ There are six main differences between the concrete and abstract specs:
 \end{figure}
 
 % TODO reorder these
-They are ranked in rough order of most difficult to least difficult. No difficulty is too great to be overcome--we believe the specs are not "fundamentally different" and that they can be linked via proof. Indeed, a goal of this project was to find and remove differences in the process of proof.
+They are ranked in rough order of most difficult to least difficult. 
+% No difficulty is too great to be overcome--we believe the specs are not "fundamentally different" and that they can be linked via proof. Indeed, a goal of this project was to find and remove differences in the process of proof.
 
 The last, $6$, is easily resolved by unfolding the definitions of HMAC\_2K and GHMAC\_2K. We solve the other five by changing definitions and massaging the two specs in the "same direction," proving equality each time.
 
@@ -315,7 +309,7 @@ For several other ways to convert between the definitions, see $ByteBitRelations
 
 \subsection{Instantiating the abstract specification}
 
-We instantiate the block sizes and wrap the concrete functions in $byteToBit$ and/or $intlist\_to\_Zlist$ conversion functions. The latter is necessary because portions of the $SHA$-$256$ spec operate on lists of $Integer$s (four bytes, or $Z$, combined into 32 bits), as specified in FIPS Pub. 180-2.
+We instantiate the block sizes and wrap the concrete functions in $byteToBit$ and/or $intlist\_to\_Zlist$ conversion functions. The latter is necessary because portions of the $SHA$-$256$ spec operate on lists of $Integer$s (four bytes, or $Z$, combined into 32 bits), as specified in FIPS 180-4.
 
 \lstinputlisting[firstline=32, lastline=48]{../HMAC_spec_parameters.v}
 
@@ -461,19 +455,19 @@ When it comes to theorems that involve tricky math, we exploited the fact that r
 
 \subsection{Problems encountered}
 
-Initially, we attempted to do the proof on the abstract spec as-is. We found it difficult to work with dependent types, induction, and John Major equality, which is a generalization of equality necessary to deal with dependent types. One common problem was that there are no easy Coq facilities for type-level manipulation, e.g. Coq cannot automatically convince itself that $\forall (n : nat), \s Bvector \s (n+1) = Bvector \s (S \s n)$. This crops up often in recursive functions.
+Initially, we attempted to do the proof on the abstract spec as-is. We found it difficult to work with dependent types, induction, and John Major equality (McBride (2002)), which is a generalization of equality necessary to deal with dependent types. One common problem was that there are no easy Coq facilities for type-level manipulation, e.g. Coq cannot automatically convince itself that $\forall (n : nat), \s Bvector \s (n+1) = Bvector \s (S \s n)$. This crops up often in recursive functions.
 
-Additionally, we encountered problems converting between many machine representations of numbers: byte and bit of course, byte and Z, integer and Z, and even little-endian vs. big-endian.
+Additionally, we encountered problems converting between many machine representations of numbers: byte and bit of course, byte and Z, integer and Z, and even little-endian and big-endian.
 
-Lastly, we did not find much prior work on this sort of equivalence proof or the "one-way roundtrip" algebraic property, except for related functions in Coq.Strings.Ascii.
+Lastly, we did not find much prior work on this sort of equivalence proof or the "one-way roundtrip" algebraic property, except for related functions in Coq.Strings.Ascii (Thery).
 
-\section{The proof of HMAC's safety}
+\section{The proof of HMAC's security}
 
 \subsection{The 1996 Bellare proof}
 
 Let $f$ be the compression function and $f^*$ the iteration of $f$ (i.e. something like SHA-256, constructed via the Merkle-Damgard construction).
 
-Given the assumption that $f$ is a pseudo-random function (PRF), that implies that $f^*$ is computationally almost universal ($cAU$). $cAU$ is a slightly weaker property than collision-resistant (Bellare 1996 uses collision-resistance; Bellare 2004 weakens it to $cAU$.) An RKA is a related-key attack wherein the adversary queries the function both with the target key and with other adversary-defined keys. The adversary may know that there is some mathematical relationship among the keys, but might not know the exact value of the keys.
+Given the assumption that $f$ is a pseudo-random function (PRF), that implies that $f^*$ is computationally almost universal ($cAU$). $cAU$ is a slightly weaker property than collision-resistant (Bellare (1996) uses collision-resistance; Bellare (2006) weakens it to $cAU$.) An RKA is a related-key attack wherein the adversary queries the function both with the target key and with other adversary-defined keys. The adversary may know that there is some mathematical relationship among the keys, but might not know the exact value of the keys.
 
 % (\verb|goo.gl/wK8OXg|)
 \begin{figure}[h!]
@@ -486,13 +480,13 @@ The $f^* cAU$ property is used to prove that generalized NMAC (GNMAC) using $f^*
 
 Using that fact and the assumption that $f^*$ is RKA-resistant, we prove that GHMAC (single-keyed) using $f^*$ is a PRF. This, plus the fact that the padding function for $f$ is one-to-one, leads finally to the proof that HMAC using $f^*$ is a PRF.
 
-Among other simplifications, Bellare 2004 proves that the $f \s PRF$ assumption implies the $f^* \s cAU$ assumption. (TODO)
+Among other simplifications, Bellare (2004) proves that the $f \s PRF$ assumption implies the $f^* \s cAU$ assumption, indicated by the dotted arrow in Figure 6. (TODO)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Formalization in Coq}
 
-See "The Mechanized Cryptography Framework" (Petcher 2014), which presents the framework of a probabilistic programming language implemented in Coq. The Bellare 1996 proof is formalized using MCF. (TODO)
+Petcher (2014) presents the "Mechanized Cryptography Framework," a probabilistic programming language implemented in Coq. Petcher (2015) formalizes Bellare's 1996 proof using MCF. (TODO)
 
 \subsection{Transfer of properties}
 
@@ -504,8 +498,9 @@ In order for the the proof to hold, the following assumptions must hold:
 \item $f^*$ is resistant to related-key attacks.
 \end{itemize}
 
-Examining the final spec, these are mostly true. It has been proven that the SHA padding function, and thus the wrapped SHA padding function, are one-to-one. $opad$ and $ipad$ are defined to be different as well. However, it is unknown whether $f$ (the internal SHA compression function) is a PRF. Also, we have not been able to determine whether SHA-256 is resistant to related-key attacks. (TODO)
+Examining the final spec, these are mostly true. It is obvious on inspection that the SHA padding function, and thus the wrapped SHA padding function, are one-to-one. Beringer (2015) also defined $opad$ and $ipad$ to be different. However, it is unknown whether $f$ (the internal SHA compression function) is a PRF--this is an open conjecture. Also, we have not been able to determine whether SHA-256 is resistant to related-key attacks. (TODO)
 
+% TODO future work
 Thus, via the $PRF\_Convert$ argument, the following theorem can be stated: "there exists a function $f$ that is equivalent to the C program, and $f$ is a pseudo-random function." (TODO, unclear)
 
 After composing the theorems, the HMAC specs "drop out" of the proof, leaving an end-to-end proof of correctness.
@@ -513,9 +508,9 @@ After composing the theorems, the HMAC specs "drop out" of the proof, leaving an
 \section{conclusion}
 
 % TODO rewrite 
-Again, we bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code is "safe to use."
+Again, we bridge the gap between the abstract and the concrete HMAC spec by formally proving their equivalence. This proof transfers the desirable and necessary property of being a pseudo-random function (with some caveats) to both the concrete spec and the C implementation of HMAC, guaranteeing that the OpenSSL code provides cryptographic security (as specified by Bellare (1996)).
 
-We also contribute a theory of reasoning about equivalence, especially between programs working with bytes and programs working with bits. We contribute a small library for reasoning about these correspondences and converting between inductive and computational definitions.
+We also contribute a theory of reasoning about equivalence, especially between programs working with bytes and programs working with bits. We formalize the theory in a small library for reasoning about these correspondences and converting between inductive and computational definitions.
 
 We have also added comments on our success or failure using general Coq proof techniques, including brute force, dependent types, and inductive propositions for length ($InBlocks \s n$).
 
@@ -523,9 +518,11 @@ Lastly, we present our chain of successful formalizations in hopes that it will 
 
 \subsection{Future work}
 
+% TODO add "dropping out" stuff
+
 In the fields of formal verification and programming languages, more libraries could be written to aid reasoning about equivalence and lengths, as well as facilitate type-level programming in Coq. We anticipate that future work bridging paper proofs with code will run into many of the same problems that we did.
 
-In the field of cryptography, much interesting work is being done now on techniques, frameworks, and formalization of cryptographic protocols and algorithms. See EasyCrypt, Barthe's CertiCrypt, Petcher's MCF, and other work coming from IMDEA. Of course, the question of whether SHA-256 is a pseudo-random function is yet unresolved.
+In the field of cryptography, much interesting work is being done now on techniques, frameworks, and formalization of cryptographic protocols and algorithms. See EasyCrypt (Backes (2012)), CertiCrypt (Barthe (2009)), MCF (Petcher (2014)), and other work coming from IMDEA. Of course, the question of whether SHA-256's compression function is a pseudo-random function is yet unresolved.
 
 Lastly, for secure and practical use of HMAC (say, in a military setting) or any symmetric algorithm, one needs a secure method of transmitting the secret key between two agents. To that end, it is desirable to formalize, check, and prove security of an implementation of a asymmetric cryptographic algorithm. Thus, we have started work on formalizing RSA.
 
@@ -537,45 +534,79 @@ Adam Petcher deserves thanks for his patience with my many questions about his H
 
 \end{acknowledgments}
 
-\section{references}
+\subsection{References}
 
-(TODO)
+ \bibliographystyle{plainnat}
 
-RFC 2104 (HMAC, 1997): \\
-\verb|https://tools.ietf.org/html/rfc2104|
+\begin{thebibliography}{99}
 
-FIPS Publication 180-4 (Secure Hash Standard, containing SHA-256): \\
-\verb|http://csrc.nist.gov/publications/PubsFIPS.html|
+  %\emph{\LaTeX: a document preparation system}
+  % TODO this style doesn't work for \citet(appel2015} 
+  % but BibTeX doesn't seem to work nicely with TeXShop (and both styles introduce a horizontal line)
+ 
+\bibitem{appel2015}
+Appel, Andrew W. "Verification of a Cryptographic Primitive: SHA-256." In \emph{ACM Transactions on Programming Languages and Systems (TOPLAS)}, 2015. 
 
-"Verification of SHA-256," Appel 2015
+\bibitem{vfa}
+Appel, Andrew W. "Verified Functional Algorithms." Oregon Programming Languages Summer School. June 2014. Accessed January 2, 2015.
 
-"New Proofs for NMAC and HMAC: Security without Collision-Resistance," Bellare (1996)
+\bibitem{backes2012}
+Backes, Michael, Gilles Barthe, Matthias Berg, Benjamin Grégoire, César Kunz, Malte Skoruppa, and Santiago Zanella Béguelin. "Verified security of Merkle-Damgård." In \emph{Computer Security Foundations Symposium (CSF)}, 2012 IEEE 25th, pp. 354-368. IEEE, 2012.
 
-"Keying Hash Functions for Message Authentication," Bellare (2004)
+\bibitem{barthe2009}
+Barthe, Gilles, Benjamin Grégoire, and Santiago Zanella Béguelin. "Formal certification of code-based cryptographic proofs." \emph{ACM SIGPLAN Notices} 44, no. 1 (2009): 90-101.
 
-"The HMAC brawl," 2012
+\bibitem{bellare2006}
+Bellare, Mihir. "New proofs for NMAC and HMAC: Security without collision-resistance." In \emph{Advances in Cryptology--CRYPTO 2006}, pp. 602-619. Springer Berlin Heidelberg, 2006.
 
-"Another look at HMAC," Gazi, CRYPTO 2014
+\bibitem{bellare1996}
+Bellare, Mihir, Ran Canetti, and Hugo Krawczyk. "Keying hash functions for message authentication." In \emph{Advances in Cryptology--CRYPTO 1996}, pp. 1-15. Springer Berlin Heidelberg, 1996.
 
-"Code-Based Game-Playing Proofs and the Security of Triple Encryption," Bellare and Rogaway 2006
+\bibitem{bellare_games2004}
+Bellare, Mihir, and Phillip Rogaway. "Code-Based Game-Playing Proofs and the Security of Triple Encryption." \emph{IACR Cryptology ePrint Archive 2004} (2004): 331.
 
-"A plausible approach to computer-aided cryptographic proofs," Halevi 2005
+\bibitem{beringer2015}
+Beringer, Lennart. Untitled (stand-in reference for paper on verifying correctness of OpenSSL HMAC code). In progress, 2015.
 
-"The Mechanized Cryptography Framework," Petcher (unpublished)
+\bibitem{hmacbrawl}
+Bernstein, Daniel J. "The HMAC brawl." Lecture, \emph{Fast Software Encryption (FSE) Rump Session}, March 20, 2012.
 
-"Formal Certification of Code-Based Cryptographic Proofs," Barthe 2009
+\bibitem{cpdt}
+Chlipala, Adam. "Certified programming with dependent types" (2014).
 
-"Merkle-Damgard in EasyCrypt," IMDEA
+\bibitem{fips1804}
+FIPS, PUB. "180-4, Secure Hash Standards, Federal Information Processing Standards Publication." Information Technology Laboratory, National Institute of Standards and Technology, Gaithersburg, MD (2008): 20899-8900.
 
-"Certified Programming with Dependent Types," Chlipala
+\bibitem{halevi2005}
+Halevi, Shai. "A plausible approach to computer-aided cryptographic proofs." \emph{IACR Cryptology ePrint Archive 2005} (2005): 181.
 
-"Software Foundations," Pierce et al.
+\bibitem{koblitz2013}
+Koblitz, Neal, and Alfred Menezes. "Another look at HMAC." \emph{Journal of Mathematical Cryptology 7}, no. 3 (2013): 225-251.
 
-"Verified Functional Algorithms," Appel, OPLSS
+\bibitem{rfc2104}
+Krawczyk, Hugo, Mihir Bellare, and Ran Canetti. "RFC 2104: HMAC: Keyed-hashing for message authentication." 1997.
 
-Coq.Strings.Ascii
+\bibitem{mcbride2002}
+McBride, Conor. "Elimination with a motive." In \emph{Types for proofs and programs}, pp. 197-216. Springer Berlin Heidelberg, 2002.
 
-OpenSSL HMAC and SHA-256 code
+\bibitem{openssl_hmac}
+OpenSSL HMAC Documentation. Accessed January 2, 2015. https://www.openssl.org/docs/crypto/hmac.html.
+
+\bibitem{petcher2014}
+Petcher, Adam. "The Mechanized Cryptography Framework." Currently unpublished, 2014.
+
+\bibitem{petcher2015}
+Petcher, Adam. Untitled (stand-in reference for paper on Bellare proof mechanization). In progress, 2015.
+
+\bibitem{sf}
+Pierce, Benjamin C., Chris Casinghino, Marco Gaboardi, Michael Greenberg, Catalin Hritcu, Vilhelm Sjoberg, and Brent Yorgey. "Software foundations" (July 2014).
+
+\bibitem{ascii}
+Thery, Laurent. Library Coq.Strings.Ascii. Accessed January 2, 2015. 
+
+% TODO: setoid rewrite, galois connection
+
+\end{thebibliography}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
