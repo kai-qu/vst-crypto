@@ -116,7 +116,7 @@ The Merkle-Damg{\aa}rd construction (referred to as "M-D" from now on) is a way 
 \begin{figure}[h!]
 	\centering
 	\includegraphics[scale=0.24]{Merkle-Damgard}
-	\caption{The Merkle-Damg{\aa}rd construction. $IV$ denotes the initialization vector and $f$ denotes the compression function.}
+	\caption{The Merkle-Damg{\aa}rd construction. $IV$ denotes the initialization vector and $f$ denotes the compression function. (Wikipedia)}
 \end{figure}
 
 Both of Bellare's HMAC proofs (1996, 2006) require that the underlying hash function is a Merkle-Damg{\aa}rd construction on a compression function $f$ such that $f$ is a pseudo-random function. (Another assumption on $f$ is discussed in Section III.)
@@ -137,7 +137,7 @@ To accomplish this, HMAC (a "hash-based message authentication code") was design
 % TODO different MAC security requirements
 
 To compute the authentication code of a message, RFC 2104 defines HMAC as the following action:
-$$HMAC_{H, K}(m) = H ( (k \oplus opad) | H ( k \oplus ipad | m )  ) $$
+$$HMAC_{H, K}(m) = H ( (K \oplus opad) | H ( K \oplus ipad | m )  ) $$
 
 where
 
@@ -173,7 +173,7 @@ OpenSSL includes an implementation of HMAC in C which calls the OpenSSL implemen
 \subsection{The concrete HMAC spec}
 
 % TODO it is called the concrete spec because...
-Beringer (2015) wrote a specification of HMAC to conform to RFC 2104 (IETF's English description of the algorithm); thus, it contains runnable code, operates on byte lists, and returns a byte list. Because the code contains no abstract parameters and can be run as-is, we call it the "concrete" spec. The spec distinguishes between the $Z$ type and the $byte$ type (values of type $Z$ in range $[0, 255]$); however, in this paper, we will use $Z$ synonymously with $byte$ with the understanding that all values are in range.
+Beringer (2015) wrote a specification of HMAC to conform to RFC 2104 (IETF's English description of the algorithm); thus, it contains runnable code, operates on byte lists, and returns a byte list. He has formalized a proof that the OpenSSL implementation of HMAC correctly fulfills this spec. Because the code contains no abstract parameters and can be run as-is, we call it the "concrete" spec. The spec distinguishes between the $Z$ type and the $byte$ type (values of type $Z$ in range $[0, 255]$); however, in this paper, we will use $Z$ synonymously with $byte$ with the understanding that all values are in range.
 
 The spec is constructed to work with generic cryptographic hash functions. We will instantiate it with the $SHA$-$256$ functional program, which the spec treats as a black box that takes care of the message padding and compression function iteration.
 
@@ -433,7 +433,7 @@ The proof is completed by backward-chaining these implications. The diagram make
  \begin{figure}[h!]
  	\centering
  	\includegraphics[scale=0.21]{HMAC_spec_equiv}
- 	\caption{$a \xrightarrow{T} b$ means "By $T$, $b$ implies $a$." Note after HMAC has been unpacked, all that is left is our assumptions.}
+ 	\caption{Lowercase denotes bits; uppercase denotes bytes. $a \xrightarrow{T} b$ means "By $T$, $b$ implies $a$." Note after HMAC has been unpacked, all that is left is our assumptions.}
  \end{figure}
 
 The theorem about $|$, $concat\_equiv$, is easy to prove by induction. \\
@@ -531,7 +531,7 @@ We also contribute a theory of reasoning about equivalence, especially between p
 
 We have also added comments on our success or failure using general Coq proof techniques, including brute force, dependent types, and inductive propositions for length ($InBlocks \s n$).
 
-Lastly, we have not entered the ring of the HMAC brawl, but we present our chain of successful formalizations in hopes that they are valuable to cryptographers interested in computer-checked proofs of correctness. Additionally, by proving the security of HMAC in its standardized form, we address Koblitz and Menezes's separation result between the "idealized" and "standardized" versions of HMAC (this result will be stated more precisely in a future paper).
+Lastly, we have not entered the ring of the HMAC brawl, but we present our chain of successful formalizations in hopes that they are valuable to cryptographers interested in computer-checked proofs of correctness. Additionally, by proving the security of HMAC in its standardized form, we address Koblitz and Menezes's separation result between the "idealized" and "standardized" versions of HMAC. We will state this result more precisely in a future paper.
 
 \subsection{Future work}
 
@@ -547,7 +547,7 @@ Lastly, for secure and practical use of HMAC (say, in a military setting) or any
 
 I would like to thank my advisor, Andrew Appel, for lots of patience, help with Coq hacking, and suggesting this interesting and important project in the first place. I owe a lot to Lennart Beringer for his help with proofs during many weekend meetings.
 
-Adam Petcher deserves thanks for his patience with my many questions about his HMAC spec, and for explaining to me the Bellare proof and his mechanization. Qinxiang Cao helped me realize that several of my proof techniques at that time would not work, and suggested a new idea.
+Adam Petcher deserves thanks for his patience with my many questions about his HMAC spec, and for explaining to me the Bellare proof and his mechanization. Qinxiang Cao helped me realize that several of my proof techniques at that time would not work, and suggested a new idea. Thanks to Omar Rizwan for helpful comments on this paper.
 
 \end{acknowledgments}
 
