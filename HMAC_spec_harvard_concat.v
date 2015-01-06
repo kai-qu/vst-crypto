@@ -890,7 +890,6 @@ Theorem HMAC_spec_equiv : forall
   ((length K) * 8)%nat = (c + p)%nat ->
   Zlength K = Z.of_nat SHA256_.BlockSize ->
   (* TODO: first implies this *)
-  (* TODO: might need more hypotheses about lengths *)
   bytes_bits_lists k K ->
   bytes_bits_lists m M ->
   bytes_bits_lists op (HMAC_SHA256.sixtyfour OP) ->
@@ -932,7 +931,6 @@ Proof.
   - assumption.
     (* xors preserve length *)
     *
-      (* TODO split out this proof as lemma *)
       unfold b in *. simpl. unfold BLxor. rewrite -> list_length_map.
       rewrite -> combine_length.
       pose proof bytes_bits_length op (HMAC_SHA256.sixtyfour OP) as ops_len.
