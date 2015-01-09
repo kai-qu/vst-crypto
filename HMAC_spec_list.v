@@ -5,16 +5,9 @@ Require Import Bvector.
 Require Import List.
 Require Import HMAC_common_defs.
 Require Import Arith.
+Require Import HMAC_spec_concat.
 
 Module HMAC_List.
-
-(* Replacing splitVector *)
-Definition splitList {A : Type} (n : nat) (l : list A) : (list A * list A) :=
-  (firstn n l, skipn n l).
-
-(* Replacing BVxor *)
-Definition BLxor (xs : Blist) (ys : Blist) :=
-  map (fun p => xorb (fst p) (snd p)) (combine xs ys).
 
 Section HMAC.
 
@@ -71,3 +64,27 @@ Section HMAC.
 End HMAC.
 
 End HMAC_List.
+
+
+(* TODO fill these in *)
+Parameter splitAndPad : Blist -> Blist.
+Parameter fpad : Blist -> Blist.
+
+Parameter splitAndPad_blocks : Blist -> list Blist.
+
+Theorem HMAC_list_concat : forall (k m : Blist) (op ip : Blist),
+  HMAC_List.HMAC c p sha_h sha_iv splitAndPad_blocks fpad op ip k m =
+  HMAC_Concat.HMAC c p sha_h sha_iv splitAndPad fpad op ip k m.
+Proof.
+  intros k m op ip.
+  unfold c, p in *. simpl in *.
+  unfold HMAC_List.HMAC. unfold HMAC_Concat.HMAC.
+  unfold HMAC_List.HMAC_2K. unfold HMAC_Concat.HMAC_2K.
+  unfold HMAC_List.GHMAC_2K. unfold HMAC_Concat.GHMAC_2K.
+
+  repeat rewrite -> split_append_id.
+  unfold HMAC_List.hash_words. unfold HMAC_Concat.hash_words.
+  (* not unfolding fpad yet *)
+  
+
+Admitted.

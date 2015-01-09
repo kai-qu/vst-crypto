@@ -71,20 +71,22 @@ End HMAC_Concat.
 Check HMAC_Concat.HMAC.
 Check HMAC_Pad.HMAC.
 
+(* TODO fill these in *)
+(* TODO move splitAndPad to HMAC_common *)
 Parameter splitAndPad : Blist -> Blist.
 Parameter fpad : Blist -> Blist.
 
-Theorem HMAC_concat_pad : forall (k m h : Blist) (op ip : Blist),
+Theorem HMAC_concat_pad : forall (k m : Blist) (op ip : Blist),
   HMAC_Pad.HMAC c p sha_h sha_iv sha_splitandpad op ip k m =
   HMAC_Concat.HMAC c p sha_h sha_iv splitAndPad fpad op ip k m.
 Proof.
-  intros k m h op ip.
+  intros k m op ip.
   unfold c, p in *. simpl in *.
   unfold HMAC_Pad.HMAC. unfold HMAC_Concat.HMAC.
   unfold HMAC_Pad.HMAC_2K. unfold HMAC_Concat.HMAC_2K.
   unfold HMAC_Pad.GHMAC_2K. unfold HMAC_Concat.GHMAC_2K.
 
-  repeat rewrite -> HMAC_Pad.split_append_id.
+  repeat rewrite -> split_append_id.
   unfold HMAC_Pad.hash_words_padded.
   unfold HMAC_Concat.hash_words.
   unfold HMAC_Concat.app_fpad.

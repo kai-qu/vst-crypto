@@ -53,3 +53,38 @@ Definition sha_h (regs : Blist) (block : Blist) : Blist :=
 
 Definition sha_splitandpad (msg : Blist) : Blist :=
   bytesToBits (sha_padding_lemmas.pad (bitsToBytes msg)).
+
+(* --------------- *)
+
+Lemma firstn_exact : 
+  forall {A : Type} (l1 l2 : list A) (n : nat),
+    (length l1 = n)%nat -> firstn n (l1 ++ l2) = l1.
+Proof.
+  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
+  * f_equal. apply IHl1. reflexivity.
+Qed.    
+
+Lemma skipn_exact :
+  forall {A : Type} (l1 l2 : list A) (n : nat),
+    (length l1 = n)%nat -> skipn n (l1 ++ l2) = l2.
+Proof.
+  induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
+  * apply IHl1. reflexivity.
+Qed.
+
+Lemma split_append_id : forall {A : Type} (len : nat) (l1 l2 : list A),
+                               length l1 = len -> length l2 = len ->
+                               splitList len (l1 ++ l2) = (l1, l2).
+Proof.
+  induction len; intros l1 l2 len1 len2.
+  -
+    assert (H: forall {A : Type} (l : list A), length l = 0%nat -> l = []).
+      intros. destruct l.
+      reflexivity. inversion H.
+    apply H in len1. apply H in len2.
+    subst. reflexivity.
+  -
+    unfold splitList.
+    rewrite -> firstn_exact. rewrite -> skipn_exact.
+    * reflexivity. * assumption. * assumption.
+Qed.
