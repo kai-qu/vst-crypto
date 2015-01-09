@@ -4,6 +4,10 @@ Set Implicit Arguments.
 Require Import Bvector.
 Require Import List.
 Require Import Arith.
+Require Import HMAC_spec_list.
+Require Import HMAC_common_defs.
+
+Module HMAC_Abstract.
 
 Definition Blist := list bool.
 
@@ -71,3 +75,9 @@ Section HMAC.
     HMAC_2K (Vector.append (BVxor _ k opad) (BVxor _ k ipad)).
 
 End HMAC.
+
+End HMAC_Abstract.
+
+(* Can't directly prove equality here, just equivalence via length preservation *)
+(* Might want to do that in the HMAC_List module *)
+

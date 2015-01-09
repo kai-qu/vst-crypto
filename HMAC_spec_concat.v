@@ -1,20 +1,13 @@
 Set Implicit Arguments.
 
-
-Require Import Bvector.
 Require Import List.
+Require Import Bvector.
 Require Import HMAC_common_defs.
-Require Import Arith.
+Require Import SHA256.
+Require Import HMAC_spec_pad.
+Require Import Coq.Program.Basics.
 
-Module HMAC_List.
-
-(* Replacing splitVector *)
-Definition splitList {A : Type} (n : nat) (l : list A) : (list A * list A) :=
-  (firstn n l, skipn n l).
-
-(* Replacing BVxor *)
-Definition BLxor (xs : Blist) (ys : Blist) :=
-  map (fun p => xorb (fst p) (snd p)) (combine xs ys).
+Module HMAC_Concat.
 
 Section HMAC.
 
@@ -25,13 +18,16 @@ Section HMAC.
   Variable h : Blist -> Blist -> Blist.
   (* The initialization vector is part of the spec of the hash function. *)
   Variable iv : Blist.
+
+  (* splitAndPad concat'ed, normal fold replaced by firstn/splitn manual fold *)
+
   (* The iteration of the compression function gives a keyed hash function on lists of words. *)
-  Definition h_star k (m : list (Blist)) :=
-    fold_left h m k.
+  Definition h_star k (m : Blist) :=
+    hash_blocks_bits h m k.
   (* The composition of the keyed hash function with the IV gives a hash function on lists of words. *)
   Definition hash_words := h_star iv.
 
-  Variable splitAndPad : Blist -> list (Blist).
+  Variable splitAndPad : Blist -> Blist.
   Hypothesis splitAndPad_1_1 : 
     forall b1 b2,
       splitAndPad b1 = splitAndPad b2 ->
@@ -52,8 +48,8 @@ Section HMAC.
   (* The "two-key" version of GHMAC and HMAC. *)
   Definition GHMAC_2K (k : Blist) m :=
     let (k_Out, k_In) := splitList b k in
-      let h_in := (hash_words (k_In :: m)) in 
-        hash_words (k_Out :: (app_fpad h_in) :: nil).
+      let h_in := (hash_words (k_In ++ m)) in 
+        hash_words (k_Out ++ app_fpad h_in).
   
   Definition HMAC_2K (k : Blist) (m : Blist) :=
     GHMAC_2K k (splitAndPad m).
@@ -70,4 +66,32 @@ Section HMAC.
 
 End HMAC.
 
-End HMAC_List.
+End HMAC_Concat.
+
+Check HMAC_Concat.HMAC.
+Check HMAC_Pad.HMAC.
+
+Parameter splitAndPad : Blist -> Blist.
+Parameter fpad : Blist -> Blist.
+
+Theorem HMAC_concat_pad : forall (k m h : Blist) (op ip : Blist),
+  HMAC_Pad.HMAC c p sha_h sha_iv sha_splitandpad op ip k m =
+  HMAC_Concat.HMAC c p sha_h sha_iv splitAndPad fpad op ip k m.
+Proof.
+  intros k m h op ip.
+  unfold c, p in *. simpl in *.
+  unfold HMAC_Pad.HMAC. unfold HMAC_Concat.HMAC.
+  unfold HMAC_Pad.HMAC_2K. unfold HMAC_Concat.HMAC_2K.
+  unfold HMAC_Pad.GHMAC_2K. unfold HMAC_Concat.GHMAC_2K.
+
+  repeat rewrite -> HMAC_Pad.split_append_id.
+  unfold HMAC_Pad.hash_words_padded.
+  unfold HMAC_Concat.hash_words.
+  unfold HMAC_Concat.app_fpad.
+  unfold compose.
+  
+  
+
+
+Admitted.
+

@@ -33,39 +33,14 @@ Require Import SHA256.
 Require Import ByteBitRelations.
 Require Import XorCorrespondence.
 Require Import HMAC_functional_prog_Z. (* TODO remove? *)
+Require Import HMAC_common_defs.
 (* TODO remove useless imports *)
 
 Require Import Coq.Program.Basics. (* for function composition: ∘ *)
 
-Definition Blist := list bool.
-
 Module HMAC_Pad.
 
 Local Open Scope program_scope.
-
-(* In XorCorrespondence *)
-(* Definition Blist := list bool. *)
-
-Definition splitList {A : Type} (n : nat) (l : list A) : (list A * list A) :=
-  (firstn n l, skipn n l).
-
-Definition concat {A : Type} (l : list (list A)) : list A :=
-  flat_map id l.
-
-Definition BLxor (xs : Blist) (ys : Blist) :=
-  map (fun p => xorb (fst p) (snd p)) (combine xs ys).
-
-Function hash_blocks_bits (hash_block_bit : Blist -> Blist -> Blist) (r: Blist)
-         (msg: Blist) {measure length msg} : Blist :=
-  match msg with
-  | nil => r
-  | _ => hash_blocks_bits hash_block_bit (hash_block_bit r (firstn 512 msg)) (skipn 512 msg)
-  end.
-Proof. intros.
- destruct (lt_dec (length msg) 512). 
- rewrite skipn_length_short. simpl; omega. rewrite <- teq; auto.
- rewrite skipn_length. simpl; omega. rewrite <- teq; omega.
-Defined.
 
 Lemma firstn_exact : 
   forall {A : Type} (l1 l2 : list A) (n : nat),
