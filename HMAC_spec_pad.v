@@ -383,17 +383,6 @@ Qed.
 
 (* ----- *)
 
-Lemma length_not_emp :
-  forall {A B : Type} (l : list A) (z y : B),
-    (Datatypes.length l > 0)%nat -> match l with [] => z | _ => y end = y.
-    (* exists (x : A) (xs : list A), l = x :: xs. *)
-Proof.
-  intros.
-  induction l as [ | x xs].
-  - inversion H.
-  - reflexivity.
-Qed.
-
 (* Definition of InBlocks in sha_padding_lemmas *)
 
 Lemma test : InBlocks 512 (list_repeat 512 true).

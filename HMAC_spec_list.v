@@ -6,6 +6,7 @@ Require Import List.
 Require Import HMAC_common_defs.
 Require Import Arith.
 Require Import HMAC_spec_concat.
+Require Import ByteBitRelations.
 
 Module HMAC_List.
 
@@ -67,16 +68,81 @@ End HMAC_List.
 
 
 (* TODO fill these in *)
-Parameter splitAndPad : Blist -> Blist.
-Parameter fpad : Blist -> Blist.
+(* toBlocks should take an int giving size of block *)
+Parameter toBlocks : Blist -> list Blist. (* TODO: inverse of concat *)
 
-Parameter splitAndPad_blocks : Blist -> list Blist.
+Definition sha_splitandpad_blocks (msg : Blist) : list Blist :=
+  toBlocks (sha_splitandpad_inc msg).
+
+Definition sha_splitandpad_inc' (msg : Blist) : Blist :=
+  concat (sha_splitandpad_blocks msg).
+
+Lemma concat_toBlocks_id : forall (l : Blist),
+                             (* TODO: iff InBlocks l (define toBlocks such that this is true) *)
+                             True ->
+                             concat (toBlocks l) = l.
+Proof.
+  intros l len.
+  unfold concat.
+  
+Admitted.
+
+(* since sha_splitandpad_inc is used instead of the modified version in the Concat-Pad proof *)
+Lemma sha_splitandpad_inc_eq : forall (msg : Blist),
+                                 True ->
+                                 sha_splitandpad_inc msg = sha_splitandpad_inc' msg.
+Proof.
+  intros msg msg_blocks.
+  unfold sha_splitandpad_inc'. unfold sha_splitandpad_blocks.
+  symmetry.
+  apply concat_toBlocks_id.
+  apply msg_blocks.
+Qed.  
+
+Theorem fold_hash_blocks_eq : forall (l : Blist) (ls : list Blist),
+                                length l = b ->
+                                (* TODO InBlocks ls *)
+                                True ->
+                                fold_left sha_h (l :: ls) sha_iv =
+                                hash_blocks_bits sha_h sha_iv (l ++ concat ls).
+Proof.
+  intros l ls len_l len_ls.
+  simpl.
+  rewrite -> hash_blocks_bits_equation.
+
+  unfold b in *. 
+  rewrite -> length_not_emp.
+  *
+    rewrite -> firstn_exact.
+    rewrite -> skipn_exact.
+
+    SearchAbout fold_left.
+
+    (* TODO may need to write with fold_right, + hash_blocks_bits with "fold_right" version
+       (to blocks, reverse, concat) *)
+    admit.
+    - apply len_l.
+    - apply len_l.
+  *
+    rewrite app_length.
+    rewrite -> len_l.
+    unfold c, p in *.
+    omega.
+Qed.
+
+Lemma fpad_list_concat_eq :
+  HMAC_List.app_fpad = HMAC_Concat.app_fpad.
+Proof. reflexivity. Qed.
 
 Theorem HMAC_list_concat : forall (k m : Blist) (op ip : Blist),
-  HMAC_List.HMAC c p sha_h sha_iv splitAndPad_blocks fpad op ip k m =
-  HMAC_Concat.HMAC c p sha_h sha_iv splitAndPad fpad op ip k m.
+                             True ->
+                             True ->
+                             True ->
+                             True ->
+  HMAC_List.HMAC c p sha_h sha_iv sha_splitandpad_blocks fpad op ip k m =
+  HMAC_Concat.HMAC c p sha_h sha_iv sha_splitandpad_inc' fpad op ip k m.
 Proof.
-  intros k m op ip.
+  intros k m op ip k_len m_len op_len ip_len.
   unfold c, p in *. simpl in *.
   unfold HMAC_List.HMAC. unfold HMAC_Concat.HMAC.
   unfold HMAC_List.HMAC_2K. unfold HMAC_Concat.HMAC_2K.
@@ -84,7 +150,28 @@ Proof.
 
   repeat rewrite -> split_append_id.
   unfold HMAC_List.hash_words. unfold HMAC_Concat.hash_words.
-  (* not unfolding fpad yet *)
-  
+  rewrite -> fpad_list_concat_eq.
 
-Admitted.
+  unfold HMAC_List.h_star.
+  unfold HMAC_Concat.h_star.
+
+  unfold sha_splitandpad_inc'.
+  rewrite <- fold_hash_blocks_eq.
+  assert (forall (l1 l2 : Blist), l1 ++ l2 = l1 ++ concat (l2 :: nil)) as create_concat.
+    intros. unfold concat. simpl.
+    rewrite -> app_nil_r. reflexivity.
+
+  rewrite -> create_concat.
+  rewrite <- fold_hash_blocks_eq.
+  reflexivity.
+
+  admit.
+  admit.
+  admit.
+  admit.
+  admit.
+  admit.
+  admit.
+  admit.
+Qed.  
+

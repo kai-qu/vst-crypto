@@ -6,6 +6,7 @@ Require Import sha_padding_lemmas.
 Require Import Recdef.
 Require Import List.
 Require Import Arith.
+Require Import Coqlib.
 
 Definition Blist := list bool.
 
@@ -38,6 +39,8 @@ Defined.
 
 Definition c := (SHA256_.DigestLength * 8)%nat.
 Definition p := (32 * 8)%nat.
+Definition b := (c + p)%nat.
+Definition BlockSize := 64.
 
 Definition intsToBits (l : list int) : list bool :=
   bytesToBits (SHA256.intlist_to_Zlist l).
@@ -53,6 +56,26 @@ Definition sha_h (regs : Blist) (block : Blist) : Blist :=
 
 Definition sha_splitandpad (msg : Blist) : Blist :=
   bytesToBits (sha_padding_lemmas.pad (bitsToBytes msg)).
+
+(* modified version of sha_padding_lemmas.pad *)
+Definition pad_inc (msg : list Z) : list Z := 
+  let n := BlockSize + Zlength msg in
+  msg ++ [128%Z] 
+      ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0
+      ++ intlist_to_Zlist ([Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)]).
+
+Definition sha_splitandpad_inc (msg : Blist) : Blist :=
+  bytesToBits (pad_inc (bitsToBytes msg)).
+
+(* artifact of app_fpad definition *)
+Definition fpad_inner (msg : list Z) : list Z :=
+  let n := BlockSize + Zlength msg in
+  [128%Z] 
+    ++ list_repeat (Z.to_nat (-(n + 9) mod 64)) 0
+    ++ intlist_to_Zlist ([Int.repr (n * 8 / Int.modulus), Int.repr (n * 8)]).
+
+Definition fpad (msg : Blist) : Blist :=
+  bytesToBits (fpad_inner (bitsToBytes msg)).
 
 (* --------------- *)
 
@@ -70,6 +93,16 @@ Lemma skipn_exact :
 Proof.
   induction l1; destruct n; intros; simpl; try reflexivity; inversion H.
   * apply IHl1. reflexivity.
+Qed.
+
+Lemma length_not_emp :
+  forall {A B : Type} (l : list A) (z y : B),
+    (Datatypes.length l > 0)%nat -> match l with [] => z | _ => y end = y.
+Proof.
+  intros.
+  induction l as [ | x xs].
+  - inversion H.
+  - reflexivity.
 Qed.
 
 Lemma split_append_id : forall {A : Type} (len : nat) (l1 l2 : list A),
