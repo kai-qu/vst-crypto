@@ -104,7 +104,139 @@ Proof.
     admit.                      (* not sure *)
 Qed.
 
+SearchAbout Vector.append.
 
+Theorem app_eq : forall (n : nat) (v1 v2 : Bvector n) (l1 l2 : Blist),
+                   l1 = Vector.to_list v1 ->
+                   l2 = Vector.to_list v2 ->
+                   l1 ++ l2 = Vector.to_list (Vector.append v1 v2).
+Proof.
+  intros n v1 v2 l1 l2 vl1_eq vl2_eq.
+  subst.
+  unfold Vector.append.
+
+Admitted.
+Check HMAC_Abstract.splitVector.
+
+Theorem split_eq : forall (n m : nat) (v : Bvector (n + m)) (l : Blist),
+                     l = Vector.to_list v ->
+                     fst (splitList n l) =
+                     Vector.to_list (fst (HMAC_Abstract.splitVector n m v))
+                     /\
+                     snd (splitList n l) =
+                     Vector.to_list (snd (HMAC_Abstract.splitVector n m v)).
+Proof.
+  intros n m v l vl_eq.
+  split.
+  * 
+    unfold splitList.
+    unfold HMAC_Abstract.splitVector.
+    simpl.
+
+Admitted.
+
+(* TODO: will prove that the list equivalents have this type *)
+Parameter h_v : Bvector c -> Bvector b -> Bvector c.
+Parameter iv_v : Bvector c.
+Parameter splitAndPad_v : Blist -> list (Bvector b).
+Parameter fpad_v : Bvector c -> Bvector p. 
+Parameter opad_v ipad_v : Bvector b.
+
+(* TODO: prove fpad has right type *)
+Lemma fpad_eq : forall (v : Bvector c) (l : Blist),
+                  l = Vector.to_list v ->
+                  fpad l = Vector.to_list (fpad_v v).
+Proof.
+  intros v l inputs_eq.
+Admitted.  
+
+Lemma app_fpad_eq : forall (v : Bvector c) (l : Blist),
+                      l = Vector.to_list v ->
+                      HMAC_List.app_fpad fpad l =
+                      Vector.to_list (HMAC_Abstract.app_fpad fpad_v v).
+Proof.
+  intros v l inputs_eq.
+  subst.
+  unfold HMAC_List.app_fpad. unfold HMAC_Abstract.app_fpad.
+  apply app_eq.
+  *  reflexivity.
+  *  apply fpad_eq.
+     reflexivity.
+Qed.     
+
+(* iv *)
+Lemma iv_eq : sha_iv = Vector.to_list iv_v.
+Proof. Admitted.
+
+(* h *)
+Lemma h_eq : forall (block_v : Bvector b) (block_l : Blist),
+               block_l = Vector.to_list block_v ->
+               sha_h sha_iv block_l = Vector.to_list (h_v iv_v block_v).
+Proof.
+  intros block_v block_l blocks_eq.
+  pose proof iv_eq as iv_eq.
+  subst.
+  rewrite -> iv_eq.
+  
+Admitted.
+
+Check HMAC_Abstract.h_star.
+
+(* also h_star *)
+Lemma hash_words_eq : forall (v : list (Bvector b)) (l : list Blist),
+                      (* l = Vector.to_list v -> *)
+                      HMAC_List.hash_words sha_h sha_iv l =
+                      Vector.to_list (HMAC_Abstract.hash_words p h_v iv_v v).
+Proof.
+  intros v l. (* inputs_eq.*)
+  unfold HMAC_List.hash_words. unfold HMAC_Abstract.hash_words.
+  unfold HMAC_List.h_star. unfold HMAC_Abstract.h_star.
+  generalize dependent v.
+  induction l as [ | bl bls].
+  *
+    admit.
+  *
+    intros v. generalize dependent bl.
+    generalize dependent bls. induction v as [| bv bvs].
+    -
+      intros.
+      simpl.
+      admit.
+    - intros.
+      simpl.
+      (* apply IHbls. *)
+      (* TODO order of params? *)
+      (* TODO each element of v and l are equal, and the lists themselves are the same length *)
+      (* TODO should be able to use h_eq *)
+      admit.
+Qed.   
+
+(* TODO: opad and ipad should be in HMAC_common_parameters (factor out of all spec) *)
+Theorem HMAC_eq : forall (kv : Bvector b) (kl m op ip : Blist),
+                    kl = Vector.to_list kv ->
+                    HMAC_List.HMAC c p sha_h sha_iv sha_splitandpad_blocks fpad op ip kl m
+                    = Vector.to_list
+                        (HMAC_Abstract.HMAC h_v iv_v splitAndPad_v
+                                            fpad_v opad_v ipad_v kv m).
+Proof.
+  intros kv kl m op ip keys_eq.
+  unfold HMAC_List.HMAC. unfold HMAC_Abstract.HMAC.
+  unfold HMAC_List.HMAC_2K. unfold HMAC_Abstract.HMAC_2K.
+  unfold HMAC_List.GHMAC_2K. unfold HMAC_Abstract.GHMAC_2K.
+  rewrite -> split_append_id.
+  Check split_append_id.
+  assert (forall (n : nat) (v1 v2 : Bvector n),
+            HMAC_Abstract.splitVector n n (Vector.append v1 v2) = (v1, v2))
+         as v_split_append_id.
+    admit.                      (* TODO *)
+  rewrite -> v_split_append_id.
+
+  apply hash_words_eq.          (* TODO why does it freeze here *)
+  
+  * admit.                      (* xor preserves lengths -- ok *)
+  * admit.
+
+Qed.  
 
 (* Can't directly prove equality here, just equivalence via length preservation.
 
@@ -119,6 +251,7 @@ BVxor ~ BLxor
 splitVector ~ splitList
 
 TODO: May need to admit the equivalence of these three functions.
+Need more lemmas that relate vectors and lists.
 
 Functions changed mostly just in type:
 h_star <-- correct if h is
@@ -141,7 +274,7 @@ Let f_l ~. f_v :=
 where l ~ v :=
       l = Vector.to_list v.
 
-2. Prove that the given parameters (e.g. fpad) have the right type as stated below above in TYPE. Correctness isn't needed; that will be done later.
+2. Prove that the given parameters (e.g. fpad) have the right type. Correctness isn't needed; there's no vector specification to check the list version against.
 
 > For all parameters, prove that given an input of the right size, they will give an output of the right size. Then, prove that the initial input is of the right size. 
 
