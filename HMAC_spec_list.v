@@ -135,6 +135,7 @@ Lemma fpad_list_concat_eq :
 Proof. reflexivity. Qed.
 
 Theorem HMAC_list_concat : forall (k m : Blist) (op ip : Blist),
+                             (* assumptions on lengths of k, m, op, ip *)
                              True ->
                              True ->
                              True ->
